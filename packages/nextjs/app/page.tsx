@@ -2,11 +2,11 @@
 
 import { WizardControls } from "@/components/wizard/WizardControls";
 import { CodePreview } from "@/components/wizard/CodePreview";
-import Image from "next/image";
+import { Navbar } from "@/components/Navbar";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-base-200 p-4 md:p-8 font-sans selection:bg-fhenix-primary selection:text-fhenix-dark">
+    <div className="min-h-screen bg-base-200 font-sans selection:bg-fhenix-primary selection:text-fhenix-dark">
       {/* Background Grid Effect */}
       <div
         className="fixed inset-0 z-0 pointer-events-none opacity-20"
@@ -16,18 +16,11 @@ export default function Home() {
         }}
       ></div>
 
-      <main className="relative z-10 max-w-7xl mx-auto flex flex-col gap-8 pb-10">
+      {/* Navbar */}
+      <Navbar />
+
+      <main className="relative z-10 max-w-7xl mx-auto flex flex-col gap-8 p-4 md:p-8 pb-10">
         <header className="flex flex-col gap-4">
-          <div className="flex items-center gap-3 mb-2">
-            <Image
-              src="/fhenix_logo_dark.svg"
-              alt="Fhenix Logo"
-              width={150}
-              height={40}
-              className="h-8 w-auto"
-              priority
-            />
-          </div>
           <div className="flex items-center gap-3">
             <div className="h-px w-8 bg-fhenix-primary opacity-50"></div>
             <span className="text-fhenix-primary font-pixel text-xs tracking-widest uppercase">

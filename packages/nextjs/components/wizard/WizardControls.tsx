@@ -1,9 +1,14 @@
 "use client";
 
 import { useWizardStore } from "@/services/store/wizardStore";
-import { Lock, Zap, Wallet, Rocket, LogOut } from "lucide-react";
-import { useAccount, useDisconnect } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useDeployedContractsStore } from "@/services/store/deployedContractsStore";
+import { Lock, Zap, Rocket, Loader2, CheckCircle2 } from "lucide-react";
+import { useAccount } from "wagmi";
+import { deployContract, waitForTransactionReceipt } from "@wagmi/core";
+import { config } from "@/services/web3/wagmiConfig";
+import { abi, bytecode } from "@/utils/contract";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 export const WizardControls = () => {
   const {
@@ -17,21 +22,103 @@ export const WizardControls = () => {
     setIsShielded,
   } = useWizardStore();
 
-  const { isConnected, address } = useAccount();
-  const { openConnectModal } = useConnectModal();
-  const { disconnect } = useDisconnect();
+  const { isConnected, address, chain } = useAccount();
+  const { addContract } = useDeployedContractsStore();
 
-  const handleButtonClick = () => {
-    if (!isConnected) {
-      openConnectModal?.();
-    } else {
-      // TODO: Deploy contract logic
-      console.log("Deploy contract with:", {
-        name,
-        symbol,
-        decimals,
-        isShielded,
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deployedTxHash, setDeployedTxHash] = useState<string | null>(null);
+  const [deployedAddress, setDeployedAddress] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  // Extract clean error message
+  const getErrorMessage = (error: unknown): string => {
+    if (!error) return "Unknown error occurred";
+
+    if (error instanceof Error) {
+      // Extract the main message before any additional details
+      const message = error.message;
+
+      // Common patterns to extract the main error
+      if (
+        message.includes("User rejected") ||
+        message.includes("User denied")
+      ) {
+        return "Transaction rejected by user";
+      }
+
+      if (message.includes("insufficient funds")) {
+        return "Insufficient funds for transaction";
+      }
+
+      // Extract first line or sentence
+      const firstLine = message.split("\n")[0];
+      const firstSentence = firstLine.split(".")[0];
+
+      // If it's too long, truncate
+      if (firstSentence.length > 100) {
+        return firstSentence.substring(0, 100) + "...";
+      }
+
+      return firstSentence;
+    }
+
+    return "Failed to deploy contract";
+  };
+
+  const handleButtonClick = async () => {
+    if (!isConnected || !address || !chain) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    try {
+      setIsDeploying(true);
+      setIsSuccess(false);
+      setDeployedAddress(null);
+
+      // Deploy contract using wagmi's deployContract action
+      const hash = await deployContract(config, {
+        abi,
+        bytecode: bytecode as `0x${string}`,
+        args: [name, symbol, decimals],
       });
+
+      setDeployedTxHash(hash);
+      console.log("Contract deployed! Transaction hash:", hash);
+
+      // Wait for transaction receipt to get the contract address
+      const receipt = await waitForTransactionReceipt(config, {
+        hash,
+      });
+
+      if (receipt.contractAddress) {
+        setDeployedAddress(receipt.contractAddress);
+
+        // Save the deployed contract to local storage
+        addContract({
+          address: receipt.contractAddress,
+          name,
+          symbol,
+          decimals,
+          isShielded,
+          deployer: address,
+          chainId: chain.id,
+          transactionHash: hash,
+          deployedAt: Date.now(),
+        });
+
+        console.log("Contract address:", receipt.contractAddress);
+        setIsSuccess(true);
+        toast.success("Contract deployed successfully!");
+      } else {
+        throw new Error("Failed to get contract address from receipt");
+      }
+    } catch (error: unknown) {
+      console.error("Deployment error:", error);
+      const errorMessage = getErrorMessage(error);
+      toast.error(errorMessage);
+    } finally {
+      setIsDeploying(false);
     }
   };
 
@@ -141,42 +228,85 @@ export const WizardControls = () => {
       <div className="mt-auto pt-6">
         <button
           onClick={handleButtonClick}
-          className="btn border-none w-full text-white font-bold tracking-wider rounded-sm relative overflow-hidden group/btn h-12 font-display uppercase"
+          disabled={!isConnected || isDeploying || isSuccess}
+          className="btn border-none w-full text-white font-bold tracking-wider rounded-sm relative overflow-hidden group/btn h-12 font-display uppercase disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <div className="absolute inset-0 bg-fhenix-gradient opacity-90 group-hover/btn:opacity-100 transition-opacity"></div>
           <span className="relative z-10 flex items-center gap-2">
-            {isConnected ? (
+            {isDeploying ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                DEPLOYING...
+              </>
+            ) : isSuccess ? (
+              <>
+                <CheckCircle2 className="w-4 h-4" />
+                DEPLOYED!
+              </>
+            ) : (
               <>
                 <Rocket className="w-4 h-4" />
                 DEPLOY CONTRACT
               </>
-            ) : (
-              <>
-                <Wallet className="w-4 h-4" />
-                CONNECT WALLET
-              </>
             )}
-            <div className="w-2 h-2 bg-white rotate-45 group-hover/btn:rotate-90 transition-transform"></div>
+            {!isDeploying && !isSuccess && (
+              <div className="w-2 h-2 bg-white rotate-45 group-hover/btn:rotate-90 transition-transform"></div>
+            )}
           </span>
         </button>
-        {isConnected ? (
-          <div className="flex items-center justify-center gap-2 mt-3">
-            <p className="text-[10px] font-pixel text-fhenix-primary/70 uppercase tracking-widest">
-              {"// "}
-              {address?.slice(0, 6)}...{address?.slice(-4)}
-            </p>
-            <button
-              onClick={() => disconnect()}
-              className="btn btn-ghost btn-xs h-5 min-h-0 px-2 text-fhenix-muted hover:text-red-400 hover:bg-red-400/10 rounded-sm transition-all"
-              title="Disconnect"
-            >
-              <LogOut className="w-3 h-3" />
-            </button>
-          </div>
-        ) : (
+
+        {!isConnected && (
           <p className="text-center text-[10px] font-pixel text-fhenix-muted/50 mt-3 uppercase tracking-widest">
-            {"// Connect to Deploy"}
+            {"// Connect wallet in navbar to deploy"}
           </p>
+        )}
+
+        {/* Deployment status */}
+        {deployedTxHash && !deployedAddress && isDeploying && (
+          <div className="mt-3 p-3 bg-base-200 border border-fhenix-border rounded-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <Loader2 className="w-4 h-4 text-fhenix-primary animate-spin" />
+              <p className="text-[9px] font-pixel text-fhenix-muted uppercase tracking-widest">
+                {"// Waiting for Confirmation"}
+              </p>
+            </div>
+            <p className="text-[8px] font-pixel text-fhenix-muted uppercase tracking-widest mb-1">
+              TX Hash:
+            </p>
+            <p className="text-[10px] font-mono text-white break-all">
+              {deployedTxHash}
+            </p>
+          </div>
+        )}
+
+        {/* Success - Contract deployed */}
+        {deployedAddress && (
+          <div className="mt-3 p-3 bg-fhenix-primary/10 border border-fhenix-primary rounded-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle2 className="w-4 h-4 text-fhenix-primary" />
+              <p className="text-[9px] font-pixel text-fhenix-primary uppercase tracking-widest">
+                {"// Contract Deployed Successfully"}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div>
+                <p className="text-[8px] font-pixel text-fhenix-muted uppercase tracking-widest mb-1">
+                  Contract Address:
+                </p>
+                <p className="text-[10px] font-mono text-white break-all bg-base-300 p-2 rounded-sm border border-fhenix-primary/20">
+                  {deployedAddress}
+                </p>
+              </div>
+              <div>
+                <p className="text-[8px] font-pixel text-fhenix-muted uppercase tracking-widest mb-1">
+                  TX Hash:
+                </p>
+                <p className="text-[9px] font-mono text-fhenix-muted break-all">
+                  {deployedTxHash}
+                </p>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
