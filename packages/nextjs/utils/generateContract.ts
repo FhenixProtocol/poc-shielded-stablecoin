@@ -40,14 +40,8 @@ contract ${name.replace(/\s+/g, "")} is ERC20 {
 pragma solidity ^0.8.20;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {
-    ERC20Confidential
-} from "fhenix-confidential-contracts/contracts/extensions/ERC20Confidential.sol";
+import {ERC20Confidential} from "fhenix-confidential-contracts/contracts/extensions/ERC20Confidential.sol";
 
-/**
- * @title ${name.replace(/\s+/g, "")}
- * @dev Confidential Token with shielded balances
- */
 contract ${name.replace(/\s+/g, "")} is ERC20Confidential {
     uint8 private immutable _CUSTOM_DECIMALS;
 
@@ -70,4 +64,3 @@ contract ${name.replace(/\s+/g, "")} is ERC20Confidential {
     }
 }`;
 };
-

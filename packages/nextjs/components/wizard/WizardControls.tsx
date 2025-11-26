@@ -1,7 +1,7 @@
 "use client";
 
 import { useWizardStore } from "@/services/store/wizardStore";
-import { Info, Lock } from "lucide-react";
+import { Info, Lock, Zap } from "lucide-react";
 
 export const WizardControls = () => {
   const {
@@ -16,93 +16,108 @@ export const WizardControls = () => {
   } = useWizardStore();
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-base-100 rounded-xl shadow-lg h-full">
-      <div className="flex items-center gap-2 mb-2">
-        <h2 className="text-2xl font-bold">Settings</h2>
+    <div className="flex flex-col gap-6 p-6 bg-base-100 border border-fhenix-border rounded-none shadow-2xl h-full relative overflow-hidden group">
+      {/* Corner accents */}
+      <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-fhenix-primary opacity-50"></div>
+      <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-fhenix-primary opacity-50"></div>
+      <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-fhenix-primary opacity-50"></div>
+      <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-fhenix-primary opacity-50"></div>
+
+      <div className="flex items-center gap-2 mb-2 border-b border-fhenix-border pb-4">
+        <div className="p-2 bg-fhenix-primary/10 rounded-sm">
+          <Zap className="w-5 h-5 text-fhenix-primary" />
+        </div>
+        <h2 className="text-xl font-bold text-white uppercase tracking-wider font-display">Configuration</h2>
       </div>
 
       {/* Token Details Section */}
-      <div className="flex flex-col gap-4">
-        <h3 className="text-lg font-semibold text-base-content/70">Token Details</h3>
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center gap-2">
+          <span className="h-px flex-1 bg-fhenix-border"></span>
+          <h3 className="text-[10px] font-pixel text-fhenix-muted uppercase tracking-widest">Token Params</h3>
+          <span className="h-px flex-1 bg-fhenix-border"></span>
+        </div>
         
-        <div className="form-control w-full">
+        <div className="form-control w-full group/input">
           <label className="label">
-            <span className="label-text font-medium">Name</span>
+            <span className="label-text font-medium text-fhenix-muted group-focus-within/input:text-fhenix-primary transition-colors font-display uppercase text-xs tracking-wide">Name</span>
           </label>
           <input
             type="text"
-            placeholder="MyShieldedToken"
-            className="input input-bordered w-full"
+            placeholder="Fhenix USD"
+            className="input input-bordered w-full bg-base-200 border-fhenix-border focus:border-fhenix-primary focus:ring-1 focus:ring-fhenix-primary/50 rounded-sm transition-all text-white placeholder:text-fhenix-muted/30 font-mono text-sm"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
         </div>
 
-        <div className="form-control w-full">
-          <label className="label">
-            <span className="label-text font-medium">Ticker (Symbol)</span>
-          </label>
-          <input
-            type="text"
-            placeholder="MST"
-            className="input input-bordered w-full"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
-          />
-        </div>
-
-        <div className="form-control w-full">
-          <label className="label">
-            <span className="label-text font-medium">Decimals</span>
-          </label>
-          <input
-            type="number"
-            placeholder="18"
-            className="input input-bordered w-full no-spinners"
-            value={decimals}
-            onChange={(e) => setDecimals(Number(e.target.value))}
-            min={0}
-            max={255}
-          />
-        </div>
-      </div>
-
-      <div className="divider"></div>
-
-      {/* Features Section */}
-      <div className="flex flex-col gap-4">
-        <h3 className="text-lg font-semibold text-base-content/70">Features</h3>
-        
-        <div className="form-control">
-          <label className="label cursor-pointer justify-start gap-4">
+        <div className="flex gap-4">
+          <div className="form-control w-1/2 group/input">
+            <label className="label">
+              <span className="label-text font-medium text-fhenix-muted group-focus-within/input:text-fhenix-primary transition-colors font-display uppercase text-xs tracking-wide">Ticker</span>
+            </label>
             <input
-              type="checkbox"
-              className="toggle toggle-primary"
-              checked={isShielded}
-              readOnly
-              // User requested "always be on", so we make it read-only or disable interaction
-              onClick={() => { /* Prevent toggle off */ }}
+              type="text"
+              placeholder="FUSD"
+              className="input input-bordered w-full bg-base-200 border-fhenix-border focus:border-fhenix-primary focus:ring-1 focus:ring-fhenix-primary/50 rounded-sm transition-all text-white placeholder:text-fhenix-muted/30 uppercase font-mono text-sm"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
             />
-            <span className="label-text font-medium flex items-center gap-2">
-              Shield Mode
-              <Lock className="w-4 h-4 text-primary" />
-            </span>
-          </label>
-          <div className="text-xs text-base-content/50 mt-1 ml-14">
-            Enables Fully Homomorphic Encryption (FHE) for confidential balances and transfers.
+          </div>
+
+          <div className="form-control w-1/2 group/input">
+            <label className="label">
+              <span className="label-text font-medium text-fhenix-muted group-focus-within/input:text-fhenix-primary transition-colors font-display uppercase text-xs tracking-wide">Decimals</span>
+            </label>
+            <input
+              type="number"
+              placeholder="18"
+              className="input input-bordered w-full bg-base-200 border-fhenix-border focus:border-fhenix-primary focus:ring-1 focus:ring-fhenix-primary/50 rounded-sm transition-all text-white placeholder:text-fhenix-muted/30 no-spinners font-mono text-sm"
+              value={decimals}
+              onChange={(e) => setDecimals(Number(e.target.value))}
+              min={0}
+              max={255}
+            />
           </div>
         </div>
       </div>
 
-      <div className="mt-auto pt-8">
-        <button className="btn btn-primary w-full text-lg">
-          Deploy Contract
+      {/* Features Section */}
+      <div className="flex flex-col gap-4 mt-2">
+        <div className="flex items-center gap-2">
+          <span className="h-px flex-1 bg-fhenix-border"></span>
+          <h3 className="text-[10px] font-pixel text-fhenix-muted uppercase tracking-widest">Security</h3>
+          <span className="h-px flex-1 bg-fhenix-border"></span>
+        </div>
+        
+        <div className="form-control w-full">
+          <label className="label cursor-pointer justify-between items-center py-0">
+            <span className="label-text font-bold text-white flex items-center gap-2 font-display tracking-wide">
+              <Lock className="w-4 h-4 text-fhenix-primary" />
+              SHIELD MODE
+            </span>
+            <input
+              type="checkbox"
+              className="toggle toggle-primary border-fhenix-primary bg-fhenix-primary hover:bg-fhenix-primary toggle-sm"
+              checked={isShielded}
+              onChange={(e) => setIsShielded(e.target.checked)}
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="mt-auto pt-6">
+        <button className="btn border-none w-full text-white font-bold tracking-wider rounded-sm relative overflow-hidden group/btn h-12 font-display uppercase">
+          <div className="absolute inset-0 bg-fhenix-gradient opacity-90 group-hover/btn:opacity-100 transition-opacity"></div>
+          <span className="relative z-10 flex items-center gap-2">
+            DEPLOY CONTRACT
+            <div className="w-2 h-2 bg-white rotate-45 group-hover/btn:rotate-90 transition-transform"></div>
+          </span>
         </button>
-        <p className="text-center text-xs text-base-content/50 mt-2">
-          Wallet connection required for deployment
+        <p className="text-center text-[10px] font-pixel text-fhenix-muted/50 mt-3 uppercase tracking-widest">
+          // Wallet Connection Required
         </p>
       </div>
     </div>
   );
 };
-

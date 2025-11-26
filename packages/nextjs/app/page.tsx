@@ -2,28 +2,54 @@
 
 import { WizardControls } from "@/components/wizard/WizardControls";
 import { CodePreview } from "@/components/wizard/CodePreview";
+import Image from "next/image";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-base-200 p-4 md:p-8 font-sans">
-      <main className="max-w-7xl mx-auto h-[calc(100vh-4rem)] flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary w-fit">
-            Shielded Stablecoin Wizard
-          </h1>
-          <p className="text-base-content/70 text-lg">
-            Create and deploy privacy-enabled stablecoins in minutes.
-          </p>
-        </div>
+    <div className="min-h-screen bg-base-200 p-4 md:p-8 font-sans selection:bg-fhenix-primary selection:text-fhenix-dark">
+      {/* Background Grid Effect */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none opacity-20"
+        style={{
+          backgroundImage: "radial-gradient(#1E293B 1px, transparent 1px)",
+          backgroundSize: "24px 24px",
+        }}
+      ></div>
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
+      <main className="relative z-10 max-w-7xl mx-auto flex flex-col gap-8 pb-10">
+        <header className="flex flex-col gap-4">
+          <div className="flex items-center gap-3 mb-2">
+            <Image
+              src="/fhenix_logo_dark.svg"
+              alt="Fhenix Logo"
+              width={150}
+              height={40}
+              className="h-8 w-auto"
+              priority
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-px w-8 bg-fhenix-primary opacity-50"></div>
+            <span className="text-fhenix-primary font-pixel text-xs tracking-widest uppercase">
+              Confidential Token Wizard
+            </span>
+          </div>
+          <h1 className="text-5xl lg:text-6xl font-bold text-white tracking-tight font-display uppercase">
+            Shielded Stablecoin
+          </h1>
+          <p className="text-fhenix-muted text-lg font-medium">
+            Deploy privacy-preserving ERC20 tokens powered by FHE.
+          </p>
+        </header>
+
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Panel: Controls */}
-          <div className="lg:col-span-4 h-full min-h-0">
+          <div className="lg:col-span-3">
             <WizardControls />
           </div>
 
           {/* Right Panel: Code Preview */}
-          <div className="lg:col-span-8 h-full min-h-[500px] lg:min-h-0">
+          <div className="lg:col-span-9 h-[600px] lg:h-auto lg:aspect-auto lg:max-h-[620px]">
             <CodePreview />
           </div>
         </div>
