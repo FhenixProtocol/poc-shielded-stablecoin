@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useWizardStore } from "@/services/store/wizardStore";
 import { Zap } from "lucide-react";
 import { useAccount } from "wagmi";
@@ -7,7 +8,8 @@ import { useContractDeployment } from "@/hooks/useContractDeployment";
 import { TokenDetailsForm } from "./TokenDetailsForm";
 import { SecuritySettings } from "./SecuritySettings";
 import { DeployButton } from "./DeployButton";
-import { DeploymentStatus } from "./DeploymentStatus";
+import { DeployConfirmationModal } from "./DeployConfirmationModal";
+import { DeploySuccessModal } from "./DeploySuccessModal";
 
 export const WizardControls = () => {
   const {
@@ -21,7 +23,7 @@ export const WizardControls = () => {
     setIsShielded,
   } = useWizardStore();
 
-  const { isConnected } = useAccount();
+  const { isConnected, chain } = useAccount();
   const {
     isDeploying,
     deployedTxHash,
@@ -30,12 +32,25 @@ export const WizardControls = () => {
     deployContract,
   } = useContractDeployment();
 
-  const handleDeploy = () => {
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+
+  const handleDeployClick = () => {
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleDeploySuccess = () => {
+    setIsConfirmModalOpen(false);
+    setIsSuccessModalOpen(true);
+  };
+
+  const handleConfirmDeploy = () => {
     deployContract({
       name,
       symbol,
       decimals,
       isShielded,
+      onSuccess: handleDeploySuccess,
     });
   };
 
@@ -73,21 +88,42 @@ export const WizardControls = () => {
         onShieldedChange={setIsShielded}
       />
 
-      {/* Deploy Button and Status */}
+      {/* Deploy Button */}
       <div className="mt-auto pt-6">
         <DeployButton
           isConnected={isConnected}
           isDeploying={isDeploying}
           isSuccess={isSuccess}
-          onDeploy={handleDeploy}
-        />
-
-        <DeploymentStatus
-          deployedTxHash={deployedTxHash}
-          deployedAddress={deployedAddress}
-          isDeploying={isDeploying}
+          onDeploy={handleDeployClick}
         />
       </div>
+
+      {/* Confirmation Modal */}
+      <DeployConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmDeploy}
+        isDeploying={isDeploying}
+        transactionHash={deployedTxHash}
+        tokenDetails={{
+          name,
+          symbol,
+          decimals,
+          isShielded,
+        }}
+        chainName={chain?.name}
+      />
+
+      {/* Success Modal */}
+      <DeploySuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        contractAddress={deployedAddress || ""}
+        transactionHash={deployedTxHash || ""}
+        tokenName={name}
+        tokenSymbol={symbol}
+        chainName={chain?.name}
+      />
     </div>
   );
 };

@@ -11,6 +11,7 @@ interface DeploymentParams {
   symbol: string;
   decimals: number;
   isShielded: boolean;
+  onSuccess?: () => void;
 }
 
 // Extract clean error message
@@ -97,7 +98,9 @@ export const useContractDeployment = () => {
 
         console.log("Contract address:", receipt.contractAddress);
         setIsSuccess(true);
-        toast.success("Contract deployed successfully!");
+        
+        // Call success callback if provided
+        params.onSuccess?.();
       } else {
         throw new Error("Failed to get contract address from receipt");
       }
