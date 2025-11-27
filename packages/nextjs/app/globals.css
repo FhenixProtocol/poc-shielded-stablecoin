@@ -75,6 +75,19 @@ body {
   [data-theme='fhenixdark'] .btn-fhenix:hover {
     background-color: #00b8cc !important; /* Slightly darker cyan */
   }
+
+  /* Theme-aware text color */
+  .text-fhenix-accent {
+    @apply transition-colors duration-200;
+  }
+
+  [data-theme='fhenixlight'] .text-fhenix-accent {
+    color: #122531 !important;
+  }
+
+  [data-theme='fhenixdark'] .text-fhenix-accent {
+    color: #00E5FF !important;
+  }
 }
 
 /* Utility to remove spinners from number inputs */

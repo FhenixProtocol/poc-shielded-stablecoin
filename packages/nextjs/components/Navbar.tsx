@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Wallet, LogOut, Network, ChevronDown, Check } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { ThemeToggle } from "./ThemeToggle";
+import { useNavigationStore, TabType } from "@/services/store/navigationStore";
 
 export const Navbar = () => {
   const { isConnected, address, chain } = useAccount();
@@ -14,6 +15,7 @@ export const Navbar = () => {
   const { chains, switchChain } = useSwitchChain();
   const [isNetworkDropdownOpen, setIsNetworkDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { activeTab, setActiveTab } = useNavigationStore();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -59,6 +61,32 @@ export const Navbar = () => {
                 priority
               />
             </div>
+          </div>
+
+          {/* Center - Tabs */}
+          <div className="hidden md:flex items-center gap-1 bg-base-200 p-1 rounded-sm border border-base-300">
+            {["create", "manage", "interact"].map((tab, index) => (
+              <div key={tab} className="flex items-center">
+                <button
+                  onClick={() => setActiveTab(tab as TabType)}
+                  className={`px-4 py-1.5 rounded-sm text-xs font-display uppercase tracking-wider transition-all font-bold ${
+                    activeTab === tab
+                      ? "btn-fhenix shadow-sm"
+                      : "text-base-content/60 hover:text-base-content hover:bg-base-300/50"
+                  }`}
+                >
+                  <span className="opacity-50 mr-1">{index + 1}.</span>
+                  {tab === "create" && "Wizard"}
+                  {tab === "manage" && "Tokens"}
+                  {tab === "interact" && "Interact"}
+                </button>
+                {index < 2 && (
+                  <div className="px-2 font-mono text-sm font-bold text-fhenix-accent">
+                    →
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
 
           {/* Right side - Network & Wallet */}
