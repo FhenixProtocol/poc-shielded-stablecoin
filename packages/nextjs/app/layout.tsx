@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="fhenix">
+    <html lang="en" data-theme="fhenixlight">
       <body className="antialiased">
         <Providers>
           {children}

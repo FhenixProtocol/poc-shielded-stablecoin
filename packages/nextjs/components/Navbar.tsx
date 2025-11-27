@@ -5,6 +5,7 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import Image from "next/image";
 import { Wallet, LogOut, Network, ChevronDown, Check } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 
 export const Navbar = () => {
   const { isConnected, address, chain } = useAccount();
@@ -35,42 +36,51 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-base-100/80 backdrop-blur-md border-b border-fhenix-border">
+    <nav className="sticky top-0 z-50 bg-base-100/80 backdrop-blur-md border-b border-base-300">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <Image
-              src="/fhenix_logo_dark.svg"
-              alt="Fhenix Logo"
-              width={150}
-              height={40}
-              className="h-8 w-auto"
-              priority
-            />
-            <div className="hidden md:flex items-center gap-2">
-              <div className="h-4 w-px bg-fhenix-border"></div>
-              <span className="text-fhenix-primary font-pixel text-[10px] tracking-widest uppercase">
-                Wizard
-              </span>
+            <div className="relative h-8 w-[150px]">
+              {/* Logo for Light Mode (Dark Text) */}
+              <Image
+                src="/logo_light.svg"
+                alt="Fhenix Logo"
+                fill
+                className="object-contain theme-logo-light"
+                priority
+              />
+              {/* Logo for Dark Mode (White Text) */}
+              <Image
+                src="/fhenix_logo_dark.svg"
+                alt="Fhenix Logo"
+                fill
+                className="object-contain theme-logo-dark"
+                priority
+              />
             </div>
           </div>
 
           {/* Right side - Network & Wallet */}
           <div className="flex items-center gap-3">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
             {/* Network Selector */}
             {isConnected && chain && (
               <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={() => setIsNetworkDropdownOpen(!isNetworkDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-2 bg-base-200 border border-fhenix-border hover:border-fhenix-primary rounded-sm transition-all group"
+                  onClick={() =>
+                    setIsNetworkDropdownOpen(!isNetworkDropdownOpen)
+                  }
+                  className="flex items-center gap-2 px-3 py-2 bg-base-200 border border-base-300 hover:border-primary rounded-sm transition-all group"
                 >
-                  <Network className="w-4 h-4 text-fhenix-primary" />
-                  <span className="text-white text-sm font-medium hidden sm:inline">
+                  <Network className="w-4 h-4 text-primary" />
+                  <span className="text-base-content text-sm font-medium hidden sm:inline">
                     {chain.name}
                   </span>
                   <ChevronDown
-                    className={`w-4 h-4 text-fhenix-muted transition-transform ${
+                    className={`w-4 h-4 text-base-content/50 transition-transform ${
                       isNetworkDropdownOpen ? "rotate-180" : ""
                     }`}
                   />
@@ -78,9 +88,9 @@ export const Navbar = () => {
 
                 {/* Network Dropdown */}
                 {isNetworkDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-base-100 border border-fhenix-border rounded-sm shadow-2xl overflow-hidden">
-                    <div className="p-2 border-b border-fhenix-border bg-base-200">
-                      <p className="text-[9px] font-pixel text-fhenix-muted uppercase tracking-widest">
+                  <div className="absolute right-0 mt-2 w-64 bg-base-100 border border-base-300 rounded-sm shadow-2xl overflow-hidden">
+                    <div className="p-2 border-b border-base-300 bg-base-200">
+                      <p className="text-[9px] font-pixel text-base-content/50 uppercase tracking-widest">
                         {"// Select Network"}
                       </p>
                     </div>
@@ -91,7 +101,7 @@ export const Navbar = () => {
                           onClick={() => handleNetworkSwitch(availableChain.id)}
                           className={`w-full flex items-center justify-between px-4 py-3 hover:bg-base-200 transition-colors ${
                             chain.id === availableChain.id
-                              ? "bg-fhenix-primary/10"
+                              ? "bg-primary/10"
                               : ""
                           }`}
                         >
@@ -99,16 +109,16 @@ export const Navbar = () => {
                             <div
                               className={`w-2 h-2 rounded-full ${
                                 chain.id === availableChain.id
-                                  ? "bg-fhenix-primary"
-                                  : "bg-fhenix-muted/30"
+                                  ? "bg-primary"
+                                  : "bg-base-content/30"
                               }`}
                             />
-                            <span className="text-white text-sm font-medium">
+                            <span className="text-base-content text-sm font-medium">
                               {availableChain.name}
                             </span>
                           </div>
                           {chain.id === availableChain.id && (
-                            <Check className="w-4 h-4 text-fhenix-primary" />
+                            <Check className="w-4 h-4 text-primary" />
                           )}
                         </button>
                       ))}
@@ -121,24 +131,24 @@ export const Navbar = () => {
             {/* Wallet Connection */}
             {isConnected && address ? (
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-2 bg-fhenix-primary/10 border border-fhenix-primary rounded-sm">
-                  <Wallet className="w-4 h-4 text-fhenix-primary" />
-                  <span className="text-white text-sm font-mono hidden sm:inline">
+                <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary rounded-sm">
+                  <Wallet className="w-4 h-4 text-primary" />
+                  <span className="text-base-content text-sm font-mono hidden sm:inline">
                     {address.slice(0, 6)}...{address.slice(-4)}
                   </span>
                 </div>
                 <button
                   onClick={() => disconnect()}
-                  className="p-2 bg-base-200 border border-fhenix-border hover:border-red-500 hover:bg-red-500/10 rounded-sm transition-all group"
+                  className="p-2 bg-base-200 border border-base-300 hover:border-red-500 hover:bg-red-500/10 rounded-sm transition-all group"
                   title="Disconnect"
                 >
-                  <LogOut className="w-4 h-4 text-fhenix-muted group-hover:text-red-500" />
+                  <LogOut className="w-4 h-4 text-base-content/50 group-hover:text-red-500" />
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => openConnectModal?.()}
-                className="flex items-center gap-2 px-4 py-2 bg-fhenix-gradient text-white font-bold rounded-sm hover:opacity-90 transition-opacity font-display uppercase text-sm"
+                className="flex items-center gap-2 px-4 py-2 btn-fhenix font-bold rounded-sm font-display uppercase text-sm"
               >
                 <Wallet className="w-4 h-4" />
                 <span className="hidden sm:inline">Connect</span>
@@ -150,4 +160,3 @@ export const Navbar = () => {
     </nav>
   );
 };
-

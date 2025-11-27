@@ -34,13 +34,27 @@ const config: Config = {
   daisyui: {
     themes: [
       {
-        fhenix: {
+        fhenixlight: {
+          "primary": "#00E5FF",
+          "secondary": "#2979FF",
+          "accent": "#00E5FF",
+          "neutral": "#0F172A",
+          "base-100": "#FFFFFF",
+          "base-200": "#F1F5F9",
+          "base-300": "#E2E8F0",
+          "base-content": "#0F172A",
+          "info": "#00E5FF",
+          "success": "#00C853",
+          "warning": "#FFD600",
+          "error": "#FF1744",
+        },
+        fhenixdark: {
           "primary": "#00E5FF",
           "secondary": "#2979FF",
           "accent": "#00E5FF",
           "neutral": "#1E293B",
-          "base-100": "#0F172A", // Card bg
-          "base-200": "#020617", // App bg
+          "base-100": "#0F172A",
+          "base-200": "#020617",
           "base-300": "#1E293B",
           "base-content": "#F8FAFC",
           "info": "#00E5FF",

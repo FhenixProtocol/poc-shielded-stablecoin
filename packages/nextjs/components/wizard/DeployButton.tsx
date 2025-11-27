@@ -20,9 +20,8 @@ export const DeployButton = ({
       <button
         onClick={onDeploy}
         disabled={!isConnected || isDeploying || isSuccess}
-        className="btn border-none w-full text-white font-bold tracking-wider rounded-sm relative overflow-hidden group/btn h-12 font-display uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+        className="btn btn-fhenix w-full font-bold tracking-wider rounded-sm relative overflow-hidden group/btn h-12 font-display uppercase disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <div className="absolute inset-0 bg-fhenix-gradient opacity-90 group-hover/btn:opacity-100 transition-opacity"></div>
         <span className="relative z-10 flex items-center gap-2">
           {isDeploying ? (
             <>
@@ -41,13 +40,13 @@ export const DeployButton = ({
             </>
           )}
           {!isDeploying && !isSuccess && (
-            <div className="w-2 h-2 bg-white rotate-45 group-hover/btn:rotate-90 transition-transform"></div>
+            <div className="w-2 h-2 bg-current rotate-45 group-hover/btn:rotate-90 transition-transform"></div>
           )}
         </span>
       </button>
 
       {!isConnected && (
-        <p className="text-center text-[10px] font-pixel text-fhenix-muted/50 mt-3 uppercase tracking-widest">
+        <p className="text-center text-[10px] font-pixel text-base-content/40 mt-3 uppercase tracking-widest">
           {"// Connect wallet in navbar to deploy"}
         </p>
       )}

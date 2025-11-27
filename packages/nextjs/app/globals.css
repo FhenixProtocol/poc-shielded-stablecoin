@@ -37,6 +37,46 @@ body {
   font-family: 'ClashDisplay', sans-serif; /* Default to ClashDisplay for a branded feel */
 }
 
+/* Theme-based Logo Visibility */
+/* Default state: hide both */
+.theme-logo-light, .theme-logo-dark {
+  display: none !important;
+}
+
+/* Show correct logo based on data-theme attribute */
+[data-theme='fhenixlight'] .theme-logo-light {
+  display: block !important;
+}
+
+[data-theme='fhenixdark'] .theme-logo-dark {
+  display: block !important;
+}
+
+/* Custom Button Styles for Fhenix Branding */
+@layer components {
+  .btn-fhenix {
+    @apply transition-colors duration-200 border-none;
+  }
+
+  [data-theme='fhenixlight'] .btn-fhenix {
+    background-color: #122531 !important;
+    color: white !important;
+  }
+  
+  [data-theme='fhenixlight'] .btn-fhenix:hover {
+    background-color: #0d1b24 !important; /* Slightly darker */
+  }
+
+  [data-theme='fhenixdark'] .btn-fhenix {
+    background-color: #00E5FF !important; /* Primary Cyan */
+    color: #122531 !important; /* Dark Text */
+  }
+  
+  [data-theme='fhenixdark'] .btn-fhenix:hover {
+    background-color: #00b8cc !important; /* Slightly darker cyan */
+  }
+}
+
 /* Utility to remove spinners from number inputs */
 @layer utilities {
   .no-spinners::-webkit-inner-spin-button,

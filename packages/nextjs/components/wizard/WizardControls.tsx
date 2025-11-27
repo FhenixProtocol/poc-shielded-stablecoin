@@ -55,19 +55,19 @@ export const WizardControls = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-base-100 border border-fhenix-border rounded-none shadow-2xl h-full relative overflow-hidden group">
+    <div className="flex flex-col gap-6 p-6 bg-base-100 border border-base-300 rounded-none shadow-2xl h-full relative overflow-hidden group">
       {/* Corner accents */}
-      <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-fhenix-primary opacity-50"></div>
-      <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-fhenix-primary opacity-50"></div>
-      <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-fhenix-primary opacity-50"></div>
-      <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-fhenix-primary opacity-50"></div>
+      <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-primary opacity-50"></div>
+      <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-primary opacity-50"></div>
+      <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-primary opacity-50"></div>
+      <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-primary opacity-50"></div>
 
       {/* Header */}
-      <div className="flex items-center gap-2 mb-2 border-b border-fhenix-border pb-4">
-        <div className="p-2 bg-fhenix-primary/10 rounded-sm">
-          <Zap className="w-5 h-5 text-fhenix-primary" />
+      <div className="flex items-center gap-2 mb-2 border-b border-base-300 pb-4">
+        <div className="p-2 bg-primary/10 rounded-sm">
+          <Zap className="w-5 h-5 text-primary" />
         </div>
-        <h2 className="text-xl font-bold text-white uppercase tracking-wider font-display">
+        <h2 className="text-xl font-bold text-base-content uppercase tracking-wider font-display">
           Configuration
         </h2>
       </div>
