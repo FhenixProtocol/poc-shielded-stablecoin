@@ -5,33 +5,22 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
     ERC20Confidential
 } from "fhenix-confidential-contracts/contracts/extensions/ERC20Confidential.sol";
+import {euint64} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
-/**
- * @title MockERC20Confidential
- * @dev Mock implementation of ERC20Confidential for testing purposes with configurable decimals
- */
 contract ShieldedStablecoin is ERC20Confidential {
-    uint8 private immutable _CUSTOM_DECIMALS;
-
     constructor(
         string memory name,
         string memory symbol,
         uint8 decimals_
-    ) ERC20Confidential(name, symbol) {
-        _CUSTOM_DECIMALS = decimals_;
-    }
+    ) ERC20Confidential(name, symbol, decimals_) {}
 
-    /**
-     * @dev Override decimals to return custom value
-     */
-    function decimals() public view virtual override(ERC20) returns (uint8) {
-        return _CUSTOM_DECIMALS;
-    }
-
-    /**
-     * @dev Mint new public tokens for testing
-     */
+    // Mint new public tokens for testing
     function mint(address to, uint256 amount) public {
         _mint(to, amount);
+    }
+
+    // Mint new encrypted tokens
+    function confidentialMint(address to, euint64 amount) public {
+        _confidentialUpdate(address(0), to, amount);
     }
 }
