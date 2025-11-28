@@ -9,7 +9,7 @@ export const TokenInteraction = () => {
         {/* Transfer Section */}
         <div className="bg-base-100 border border-base-300 rounded-sm p-6 relative overflow-hidden group hover:border-primary transition-colors">
           <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          
+
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-primary/10 rounded-sm">
               <Send className="w-6 h-6 text-primary" />
@@ -55,5 +55,3 @@ export const TokenInteraction = () => {
     </div>
   );
 };
-
-

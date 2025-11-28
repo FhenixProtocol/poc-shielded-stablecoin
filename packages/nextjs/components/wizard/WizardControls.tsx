@@ -94,6 +94,7 @@ export const WizardControls = () => {
           isConnected={isConnected}
           isDeploying={isDeploying}
           isSuccess={isSuccess}
+          isShielded={isShielded}
           onDeploy={handleDeployClick}
         />
       </div>
