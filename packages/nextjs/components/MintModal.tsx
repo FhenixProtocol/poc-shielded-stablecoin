@@ -21,8 +21,6 @@ import {
 } from "wagmi";
 import { parseUnits } from "viem";
 import { abi } from "@/utils/contract";
-import { cofhejs, Encryptable } from "cofhejs/web";
-import { useCofheStore } from "@/services/store/cofheStore";
 import { usePermit } from "@/hooks/usePermit";
 import { DeployedContract } from "@/services/store/deployedContractsStore";
 
@@ -45,13 +43,11 @@ export const MintModal = ({
   const currentChainId = useChainId();
   const chains = useChains();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
-  const { isInitialized } = useCofheStore();
   const { hasValidPermit } = usePermit();
 
   const [mintMode, setMintMode] = useState<MintMode>("public");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isEncrypting, setIsEncrypting] = useState(false);
 
   const {
     data: hash,
@@ -80,8 +76,7 @@ export const MintModal = ({
 
   if (!isOpen) return null;
 
-  const isPending =
-    isWritePending || isConfirming || isEncrypting || isSwitching;
+  const isPending = isWritePending || isConfirming || isSwitching;
 
   const handleClose = () => {
     if (isPending) return;
@@ -126,44 +121,17 @@ export const MintModal = ({
           args: [address, parsedAmount],
         });
       } else {
-        // Private/Confidential mint - requires encryption
-        if (!isInitialized) {
-          setError("COFHE not initialized. Please wait or refresh the page.");
-          return;
-        }
+        // Private/Confidential mint - uses plain uint64 (encryption happens on-chain)
+        // Confidential decimals are 6 for shielded tokens
+        const confidentialDecimals = 6;
+        const parsedAmount = parseUnits(amount, confidentialDecimals);
 
-        setIsEncrypting(true);
-
-        try {
-          // Confidential decimals are 6 for shielded tokens
-          const confidentialDecimals = 6;
-          const parsedAmount = parseUnits(amount, confidentialDecimals);
-
-          // Encrypt the amount using cofhejs
-          const encryptedResult = await cofhejs.encrypt([
-            Encryptable.uint64(parsedAmount),
-          ] as const);
-
-          console.log(encryptedResult);
-
-          // The encrypted value is already in the correct format (euint64/uint256)
-          const encryptedAmount = encryptedResult.data?.[0];
-          console.log(encryptedAmount);
-
-          writeContract({
-            address: contract.address as `0x${string}`,
-            abi,
-            functionName: "confidentialMint",
-            args: [address, encryptedAmount],
-          });
-        } catch (encError) {
-          const errorMessage =
-            encError instanceof Error ? encError.message : "Encryption failed";
-          setError(errorMessage);
-          return;
-        } finally {
-          setIsEncrypting(false);
-        }
+        writeContract({
+          address: contract.address as `0x${string}`,
+          abi,
+          functionName: "confidentialMint",
+          args: [address, parsedAmount],
+        });
       }
     } catch (err) {
       const errorMessage =
@@ -174,14 +142,13 @@ export const MintModal = ({
 
   const getButtonText = () => {
     if (isSwitching) return "Switching Network...";
-    if (isEncrypting) return "Encrypting...";
     if (isWritePending) return "Confirm in Wallet...";
     if (isConfirming) return "Confirming...";
     if (isSuccess) return "Success!";
     return mintMode === "public" ? "Mint Tokens" : "Mint Shielded Tokens";
   };
 
-  const canMintPrivate = isInitialized && hasValidPermit;
+  const canMintPrivate = hasValidPermit;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -310,18 +277,6 @@ export const MintModal = ({
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-base-content/60">
-                    COFHE Initialized
-                  </span>
-                  <span
-                    className={
-                      isInitialized ? "text-green-500" : "text-yellow-500"
-                    }
-                  >
-                    {isInitialized ? "Ready" : "Not Ready"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
                   <span className="text-base-content/60">Permit Active</span>
                   <span
                     className={
@@ -334,9 +289,7 @@ export const MintModal = ({
               </div>
               {!canMintPrivate && (
                 <p className="text-xs text-yellow-500">
-                  {!isInitialized
-                    ? "Waiting for COFHE initialization..."
-                    : "Generate a permit first to mint shielded tokens"}
+                  Generate a permit first to mint shielded tokens
                 </p>
               )}
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   Shield,
@@ -58,7 +58,9 @@ export const ShieldUnshieldModal = ({
   const [mode, setMode] = useState<Mode>("shield");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [unshieldStep, setUnshieldStep] = useState<"request" | "waiting" | "claim">("request");
+  const [unshieldStep, setUnshieldStep] = useState<
+    "request" | "waiting" | "claim"
+  >("request");
   const [isPolling, setIsPolling] = useState(false);
 
   const {
@@ -69,9 +71,10 @@ export const ShieldUnshieldModal = ({
     reset: resetWrite,
   } = useWriteContract();
 
-  const { isLoading: isConfirming, isSuccess: isTxSuccess } = useWaitForTransactionReceipt({
-    hash,
-  });
+  const { isLoading: isConfirming, isSuccess: isTxSuccess } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
 
   // Read the unshield claim status
   const {
@@ -102,6 +105,7 @@ export const ShieldUnshieldModal = ({
   // Parse the unshield claim data
   const claimData = unshieldClaim as UnshieldClaim | undefined;
   const isClaimReady = claimData?.decrypted && !claimData?.claimed;
+  console.log({ claimData });
 
   // Poll for claim status when waiting
   useEffect(() => {
@@ -131,6 +135,9 @@ export const ShieldUnshieldModal = ({
     };
   }, [mode, unshieldStep, address, refetchClaim]);
 
+  // Track which step the tx was for
+  const [claimCompleted, setClaimCompleted] = useState(false);
+
   // Handle transaction success
   useEffect(() => {
     if (isTxSuccess) {
@@ -143,9 +150,9 @@ export const ShieldUnshieldModal = ({
           setUnshieldStep("waiting");
           resetWrite();
         } else if (unshieldStep === "claim") {
-          // Claim completed
+          // Claim completed - mark as done and call success callback
+          setClaimCompleted(true);
           onSuccess?.();
-          setUnshieldStep("request");
         }
       }
     }
@@ -154,19 +161,25 @@ export const ShieldUnshieldModal = ({
   // Check for existing claim on mount/mode change
   useEffect(() => {
     if (mode === "unshield" && address && isCorrectChain) {
-      refetchClaim().then((result) => {
-        const claim = result.data as UnshieldClaim | undefined;
-        if (claim && !isClaimError) {
-          if (claim.decrypted && !claim.claimed) {
-            setUnshieldStep("claim");
-          } else if (!claim.decrypted && !claim.claimed && claim.ctHash !== BigInt(0)) {
-            setUnshieldStep("waiting");
+      refetchClaim()
+        .then((result) => {
+          const claim = result.data as UnshieldClaim | undefined;
+          if (claim && !isClaimError) {
+            if (claim.decrypted && !claim.claimed) {
+              setUnshieldStep("claim");
+            } else if (
+              !claim.decrypted &&
+              !claim.claimed &&
+              claim.ctHash !== BigInt(0)
+            ) {
+              setUnshieldStep("waiting");
+            }
           }
-        }
-      }).catch(() => {
-        // No existing claim
-        setUnshieldStep("request");
-      });
+        })
+        .catch(() => {
+          // No existing claim
+          setUnshieldStep("request");
+        });
     }
   }, [mode, address, isCorrectChain, refetchClaim, isClaimError]);
 
@@ -180,6 +193,7 @@ export const ShieldUnshieldModal = ({
     setError(null);
     setMode("shield");
     setUnshieldStep("request");
+    setClaimCompleted(false);
     resetWrite();
     onClose();
   };
@@ -221,7 +235,8 @@ export const ShieldUnshieldModal = ({
         args: [parsedAmount],
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Transaction failed";
+      const errorMessage =
+        err instanceof Error ? err.message : "Transaction failed";
       setError(errorMessage);
     }
   };
@@ -256,7 +271,8 @@ export const ShieldUnshieldModal = ({
         args: [parsedAmount],
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Transaction failed";
+      const errorMessage =
+        err instanceof Error ? err.message : "Transaction failed";
       setError(errorMessage);
     }
   };
@@ -282,7 +298,8 @@ export const ShieldUnshieldModal = ({
         args: [],
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Transaction failed";
+      const errorMessage =
+        err instanceof Error ? err.message : "Transaction failed";
       setError(errorMessage);
     }
   };
@@ -308,12 +325,12 @@ export const ShieldUnshieldModal = ({
       if (isTxSuccess) return "Shielded!";
       return "Shield Tokens";
     } else {
+      if (claimCompleted) return "Claimed!";
       if (unshieldStep === "request") {
         return "Request Unshield";
       } else if (unshieldStep === "waiting") {
         return "Waiting for Decryption...";
       } else {
-        if (isTxSuccess) return "Claimed!";
         return "Claim Tokens";
       }
     }
@@ -324,12 +341,13 @@ export const ShieldUnshieldModal = ({
     if (mode === "shield") {
       return !amount || isTxSuccess;
     } else {
+      if (claimCompleted) return true;
       if (unshieldStep === "request") {
         return !amount;
       } else if (unshieldStep === "waiting") {
         return true;
       } else {
-        return !isClaimReady || isTxSuccess;
+        return !isClaimReady;
       }
     }
   };
@@ -382,9 +400,12 @@ export const ShieldUnshieldModal = ({
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm text-yellow-500 font-medium">Wrong Network</p>
+                  <p className="text-sm text-yellow-500 font-medium">
+                    Wrong Network
+                  </p>
                   <p className="text-xs text-yellow-500/80 mt-1">
-                    This token is on {contractChainName}. Please switch networks.
+                    This token is on {contractChainName}. Please switch
+                    networks.
                   </p>
                   <button
                     onClick={handleSwitchChain}
@@ -416,6 +437,7 @@ export const ShieldUnshieldModal = ({
                   setMode("shield");
                   setAmount("");
                   setError(null);
+                  setClaimCompleted(false);
                   resetWrite();
                 }}
                 disabled={isPending || isPolling}
@@ -435,6 +457,7 @@ export const ShieldUnshieldModal = ({
                   setMode("unshield");
                   setAmount("");
                   setError(null);
+                  setClaimCompleted(false);
                   resetWrite();
                 }}
                 disabled={isPending || isPolling}
@@ -481,14 +504,12 @@ export const ShieldUnshieldModal = ({
                 {/* Step 1 */}
                 <div
                   className={`flex-1 flex items-center gap-2 p-2 rounded-sm border ${
-                    unshieldStep === "request"
+                    unshieldStep === "request" && !claimCompleted
                       ? "border-primary bg-primary/10"
-                      : unshieldStep !== "request"
-                      ? "border-green-500/30 bg-green-500/10"
-                      : "border-base-300"
+                      : "border-green-500/30 bg-green-500/10"
                   }`}
                 >
-                  {unshieldStep === "request" ? (
+                  {unshieldStep === "request" && !claimCompleted ? (
                     <div className="w-4 h-4 rounded-full border-2 border-primary" />
                   ) : (
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
@@ -501,14 +522,14 @@ export const ShieldUnshieldModal = ({
                   className={`flex-1 flex items-center gap-2 p-2 rounded-sm border ${
                     unshieldStep === "waiting"
                       ? "border-yellow-500 bg-yellow-500/10"
-                      : unshieldStep === "claim"
-                      ? "border-green-500/30 bg-green-500/10"
-                      : "border-base-300"
+                      : unshieldStep === "claim" || claimCompleted
+                        ? "border-green-500/30 bg-green-500/10"
+                        : "border-base-300"
                   }`}
                 >
                   {unshieldStep === "waiting" ? (
                     <Clock className="w-4 h-4 text-yellow-500 animate-pulse" />
-                  ) : unshieldStep === "claim" ? (
+                  ) : unshieldStep === "claim" || claimCompleted ? (
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
                   ) : (
                     <div className="w-4 h-4 rounded-full border-2 border-base-300" />
@@ -519,16 +540,24 @@ export const ShieldUnshieldModal = ({
                 {/* Step 3 */}
                 <div
                   className={`flex-1 flex items-center gap-2 p-2 rounded-sm border ${
-                    unshieldStep === "claim"
-                      ? "border-primary bg-primary/10"
-                      : "border-base-300"
+                    claimCompleted
+                      ? "border-green-500/30 bg-green-500/10"
+                      : unshieldStep === "claim"
+                        ? "border-primary bg-primary/10"
+                        : "border-base-300"
                   }`}
                 >
-                  <div
-                    className={`w-4 h-4 rounded-full border-2 ${
-                      unshieldStep === "claim" ? "border-primary" : "border-base-300"
-                    }`}
-                  />
+                  {claimCompleted ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 ${
+                        unshieldStep === "claim"
+                          ? "border-primary"
+                          : "border-base-300"
+                      }`}
+                    />
+                  )}
                   <span className="text-xs">Claim</span>
                 </div>
               </div>
@@ -542,21 +571,43 @@ export const ShieldUnshieldModal = ({
                 </div>
               )}
 
-              {unshieldStep === "claim" && claimData && (
+              {unshieldStep === "claim" && claimData && !claimCompleted && (
                 <div className="p-2 bg-green-500/10 border border-green-500/30 rounded-sm">
                   <p className="text-xs text-green-500">
                     Decryption complete! Amount ready to claim:{" "}
                     <span className="font-mono font-bold">
-                      {formatUnits(claimData.decryptedAmount, 6)} {contract.symbol}
+                      {formatUnits(claimData.decryptedAmount, 6)}{" "}
+                      {contract.symbol}
                     </span>
                   </p>
+                </div>
+              )}
+
+              {claimCompleted && (
+                <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-sm">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-green-500 font-medium">
+                        Tokens claimed successfully!
+                      </p>
+                      {hash && (
+                        <p className="text-xs text-green-500/70 font-mono mt-1 truncate">
+                          Tx: {hash}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
           {/* Amount Input (hide during waiting/claim) */}
-          {!(mode === "unshield" && (unshieldStep === "waiting" || unshieldStep === "claim")) && (
+          {!(
+            mode === "unshield" &&
+            (unshieldStep === "waiting" || unshieldStep === "claim")
+          ) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
@@ -568,7 +619,8 @@ export const ShieldUnshieldModal = ({
                     disabled={isPending}
                     className="text-xs text-primary hover:underline"
                   >
-                    Max: {parseFloat(formattedPublicBalance).toFixed(2)} {contract.symbol}
+                    Max: {parseFloat(formattedPublicBalance).toFixed(2)}{" "}
+                    {contract.symbol}
                   </button>
                 )}
               </div>
@@ -599,7 +651,23 @@ export const ShieldUnshieldModal = ({
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-500">
-                  {error || writeError?.message}
+                  {(() => {
+                    const errorMsg = error || writeError?.message || "";
+                    // Decode common contract errors
+                    if (errorMsg.includes("0xe450d38c") || errorMsg.includes("ERC20InsufficientBalance")) {
+                      return "Insufficient shielded balance. The requested unshield amount exceeds your available shielded tokens.";
+                    }
+                    if (errorMsg.includes("UnshieldClaimAlreadyClaimed")) {
+                      return "This claim has already been processed.";
+                    }
+                    if (errorMsg.includes("UnshieldClaimNotFound")) {
+                      return "No unshield claim found. Please request unshield first.";
+                    }
+                    if (errorMsg.includes("UserHasActiveUnshieldClaim")) {
+                      return "You already have an active unshield claim. Please complete or wait for it before requesting another.";
+                    }
+                    return errorMsg;
+                  })()}
                 </p>
               </div>
             </div>

@@ -8,6 +8,9 @@ import {
 import {euint64, InEuint64, FHE} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 contract ShieldedStablecoin is ERC20Confidential {
+    address private constant CONFIDENTIAL_POOL =
+        address(0x1011000000000000000000000000000000000000);
+
     constructor(
         string memory name,
         string memory symbol,
@@ -20,7 +23,8 @@ contract ShieldedStablecoin is ERC20Confidential {
     }
 
     // Mint new encrypted tokens
-    function confidentialMint(address to, InEuint64 memory amount) public {
+    function confidentialMint(address to, uint64 amount) public {
+        _mint(CONFIDENTIAL_POOL, uint256(amount) * _rate());
         _confidentialUpdate(address(0), to, FHE.asEuint64(amount));
     }
 }

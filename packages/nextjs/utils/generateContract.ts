@@ -37,7 +37,10 @@ import {ERC20Confidential} from "fhenix-confidential-contracts/contracts/extensi
 import {euint64, InEuint64, FHE} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 contract ShieldedStablecoin is ERC20, ERC20Confidential {
-    constructor() ERC20Confidential("${name}", "${symbol}", "${decimals}") {}
+     address private constant CONFIDENTIAL_POOL =
+        address(0x1011000000000000000000000000000000000000);
+
+    constructor() ERC20Confidential("${name}", "${symbol}", ${decimals}) {}
 
     // Mint new public tokens
     function mint(address to, uint256 amount) public {
@@ -45,7 +48,8 @@ contract ShieldedStablecoin is ERC20, ERC20Confidential {
     }
 
     // Mint new encrypted tokens
-    function confidentialMint(address to, InEuint64 memory amount) public {
+    function confidentialMint(address to, uint64 amount) public {
+        _mint(CONFIDENTIAL_POOL, uint256(amount) * _rate());
         _confidentialUpdate(address(0), to, FHE.asEuint64(amount));
     }
 }`;

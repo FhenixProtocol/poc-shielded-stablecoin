@@ -7,7 +7,7 @@ export interface DeployedContract {
   symbol: string;
   decimals: number;
   isShielded: boolean;
-  deployer: string;
+  deployer: string; // Address that added this token (not necessarily the actual deployer)
   chainId: number;
   transactionHash: string;
   deployedAt: number; // timestamp
@@ -16,6 +16,7 @@ export interface DeployedContract {
 interface DeployedContractsState {
   contracts: DeployedContract[];
   addContract: (contract: DeployedContract) => void;
+  getAllContracts: () => DeployedContract[];
   getContractsByDeployer: (deployer: string) => DeployedContract[];
   getContractsByChain: (chainId: number) => DeployedContract[];
   removeContract: (address: string) => void;
@@ -31,6 +32,10 @@ export const useDeployedContractsStore = create<DeployedContractsState>()(
         set((state) => ({
           contracts: [contract, ...state.contracts],
         })),
+
+      getAllContracts: () => {
+        return get().contracts;
+      },
 
       getContractsByDeployer: (deployer: string) => {
         return get().contracts.filter(

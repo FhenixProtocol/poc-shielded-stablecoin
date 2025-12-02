@@ -93,6 +93,17 @@ const ShieldedBalanceDisplay = ({
   const [isVisible, setIsVisible] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastCtHash, setLastCtHash] = useState<bigint | undefined>(undefined);
+
+  // Reset revealed balance when ctHash changes (new balance after mint/shield/unshield)
+  useEffect(() => {
+    if (ctHash !== lastCtHash) {
+      setLastCtHash(ctHash);
+      setRevealedBalance(null);
+      setIsVisible(false);
+      setError(null);
+    }
+  }, [ctHash, lastCtHash]);
 
   const handleToggleVisibility = async () => {
     if (ctHash === undefined || !hasValidPermit || !isInitialized) return;
@@ -516,8 +527,7 @@ const ContractCard = ({
 export const DeployedContractsList = () => {
   const { address } = useAccount();
   const chains = useChains();
-  const { getContractsByDeployer, removeContract } =
-    useDeployedContractsStore();
+  const { getAllContracts, removeContract } = useDeployedContractsStore();
   const [expandedAddress, setExpandedAddress] = useState<string | null>(null);
   const [isPermitModalOpen, setIsPermitModalOpen] = useState(false);
   const [isAddTokenModalOpen, setIsAddTokenModalOpen] = useState(false);
@@ -555,9 +565,9 @@ export const DeployedContractsList = () => {
     );
   }
 
-  const userContracts = getContractsByDeployer(address);
+  const allContracts = getAllContracts();
 
-  if (userContracts.length === 0) {
+  if (allContracts.length === 0) {
     return (
       <div className="space-y-6">
         {/* Header with Permit Button */}
@@ -619,7 +629,7 @@ export const DeployedContractsList = () => {
         <div className="flex items-center gap-3">
           <FileText className="w-6 h-6 text-primary" />
           <h2 className="text-xl font-bold text-base-content uppercase tracking-wider font-display">
-            Your Tokens ({userContracts.length})
+            Your Tokens ({allContracts.length})
           </h2>
         </div>
         <div className="flex items-center gap-2">
@@ -641,7 +651,7 @@ export const DeployedContractsList = () => {
       </div>
 
       <div className="space-y-4">
-        {userContracts.map((contract) => (
+        {allContracts.map((contract) => (
           <ContractCard
             key={contract.address}
             contract={contract}
