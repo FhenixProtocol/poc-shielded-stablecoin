@@ -5,7 +5,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
     ERC20Confidential
 } from "fhenix-confidential-contracts/contracts/extensions/ERC20Confidential.sol";
-import {euint64} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
+import {euint64, InEuint64, FHE} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 contract ShieldedStablecoin is ERC20Confidential {
     constructor(
@@ -20,7 +20,7 @@ contract ShieldedStablecoin is ERC20Confidential {
     }
 
     // Mint new encrypted tokens
-    function confidentialMint(address to, euint64 amount) public {
-        _confidentialUpdate(address(0), to, amount);
+    function confidentialMint(address to, InEuint64 memory amount) public {
+        _confidentialUpdate(address(0), to, FHE.asEuint64(amount));
     }
 }

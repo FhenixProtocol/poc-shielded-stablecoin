@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { PermitModal } from "./PermitModal";
+import { MintModal } from "./MintModal";
+import { ShieldUnshieldModal } from "./ShieldUnshieldModal";
 import { usePermit } from "@/hooks/usePermit";
 import { abi } from "@/utils/contract";
 import { formatUnits } from "viem";
@@ -93,6 +95,7 @@ const ShieldedBalanceDisplay = ({
 
   const handleToggleVisibility = async () => {
     if (ctHash === undefined || !hasValidPermit || !isInitialized) return;
+    console.log(ctHash);
 
     // If already revealed, just toggle visibility
     if (revealedBalance !== null) {
@@ -105,37 +108,63 @@ const ShieldedBalanceDisplay = ({
   };
 
   const handleReveal = async () => {
-    if (ctHash === undefined || !hasValidPermit || !isInitialized) return;
+    if (ctHash === undefined || !hasValidPermit || !isInitialized) {
+      console.log("handleReveal early return:", {
+        ctHash,
+        hasValidPermit,
+        isInitialized,
+      });
+      return;
+    }
+
+    // If ctHash is 0, no shielded balance exists yet
+    if (ctHash === BigInt(0)) {
+      console.log("ctHash is 0, setting balance to 0");
+      setRevealedBalance(BigInt(0));
+      setIsVisible(true);
+      return;
+    }
 
     setIsRevealing(true);
     setError(null);
     try {
+      console.log("Calling cofhejs.unseal with ctHash:", ctHash.toString());
       const result = await cofhejs.unseal(ctHash, FheTypes.Uint64);
+      console.log("Unseal result:", result);
+
       if (result?.success && result?.data !== undefined) {
         setRevealedBalance(BigInt(result.data.toString()));
         setIsVisible(true);
       } else {
-        // "sealed data not found" means no shielded balance exists yet - show 0
         const errorMessage =
           result?.error?.message || String(result?.error) || "";
+        console.error("Unseal failed:", errorMessage);
+
+        // Handle various error cases
         if (
           errorMessage.includes("sealed data not found") ||
-          ctHash === BigInt(0)
+          errorMessage.includes("400 Bad Request") ||
+          errorMessage.includes("Failed to fetch full ciphertext")
         ) {
+          // No shielded balance exists yet or ciphertext not available
           setRevealedBalance(BigInt(0));
           setIsVisible(true);
         } else {
-          setError("Failed to decrypt - interact with contract first");
+          setError("Failed to decrypt");
           console.error("Unseal failed:", result);
         }
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      // "sealed data not found" means no shielded balance exists yet - show 0
+      console.error("Unseal error:", err);
+
+      // Handle various error cases
       if (
         errorMessage.includes("sealed data not found") ||
-        ctHash === BigInt(0)
+        errorMessage.includes("400 Bad Request") ||
+        errorMessage.includes("Failed to fetch full ciphertext")
       ) {
+        // No shielded balance exists yet or ciphertext not available
         setRevealedBalance(BigInt(0));
         setIsVisible(true);
       } else {
@@ -260,29 +289,38 @@ const ContractCard = ({
   chainName: string;
 }) => {
   const { address } = useAccount();
+  const [isMintModalOpen, setIsMintModalOpen] = useState(false);
+  const [isShieldModalOpen, setIsShieldModalOpen] = useState(false);
 
   // Read public balance
-  const { data: publicBalance } = useReadContract({
-    address: contract.address as `0x${string}`,
-    abi,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address && isExpanded,
-    },
-  });
+  const { data: publicBalance, refetch: refetchPublicBalance } =
+    useReadContract({
+      address: contract.address as `0x${string}`,
+      abi,
+      functionName: "balanceOf",
+      args: address ? [address] : undefined,
+      query: {
+        enabled: !!address && isExpanded,
+      },
+    });
 
   // Read confidential balance (ctHash)
-  const { data: confidentialBalance } = useReadContract({
-    address: contract.address as `0x${string}`,
-    abi,
-    functionName: "confidentialBalanceOf",
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address && isExpanded,
-    },
-  });
-  console.log({ confidentialBalance });
+  const { data: confidentialBalance, refetch: refetchConfidentialBalance } =
+    useReadContract({
+      address: contract.address as `0x${string}`,
+      abi,
+      functionName: "confidentialBalanceOf",
+      args: address ? [address] : undefined,
+      query: {
+        enabled: !!address && isExpanded,
+      },
+    });
+
+  // Refetch balances after successful mint
+  const handleMintSuccess = () => {
+    refetchPublicBalance();
+    refetchConfidentialBalance();
+  };
 
   const formatPublicBalance = (balance: bigint | undefined) => {
     if (!balance) return "0.00";
@@ -394,15 +432,47 @@ const ContractCard = ({
 
           {/* Actions */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <button className="btn btn-fhenix h-12 font-display uppercase tracking-wide text-sm">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMintModalOpen(true);
+              }}
+              className="btn btn-fhenix h-12 font-display uppercase tracking-wide text-sm"
+            >
               <Plus className="w-5 h-5 mr-2" />
               Mint Tokens
             </button>
-            <button className="btn btn-fhenix h-12 font-display uppercase tracking-wide text-sm">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsShieldModalOpen(true);
+              }}
+              disabled={!contract.isShielded}
+              className={`btn btn-fhenix h-12 font-display uppercase tracking-wide text-sm ${
+                !contract.isShielded ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
               <ArrowLeftRight className="w-5 h-5 mr-2" />
               Shield / Unshield
             </button>
           </div>
+
+          {/* Mint Modal */}
+          <MintModal
+            isOpen={isMintModalOpen}
+            onClose={() => setIsMintModalOpen(false)}
+            contract={contract}
+            onSuccess={handleMintSuccess}
+          />
+
+          {/* Shield/Unshield Modal */}
+          <ShieldUnshieldModal
+            isOpen={isShieldModalOpen}
+            onClose={() => setIsShieldModalOpen(false)}
+            contract={contract}
+            publicBalance={publicBalance as bigint | undefined}
+            onSuccess={handleMintSuccess}
+          />
 
           {/* External Actions */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-base-300/50">
