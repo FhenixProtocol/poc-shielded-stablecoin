@@ -21,6 +21,7 @@ import { useState, useEffect, useRef } from "react";
 import { PermitModal } from "./PermitModal";
 import { MintModal } from "./MintModal";
 import { ShieldUnshieldModal } from "./ShieldUnshieldModal";
+import { AddTokenModal } from "./AddTokenModal";
 import { usePermit } from "@/hooks/usePermit";
 import { abi } from "@/utils/contract";
 import { formatUnits } from "viem";
@@ -519,6 +520,7 @@ export const DeployedContractsList = () => {
     useDeployedContractsStore();
   const [expandedAddress, setExpandedAddress] = useState<string | null>(null);
   const [isPermitModalOpen, setIsPermitModalOpen] = useState(false);
+  const [isAddTokenModalOpen, setIsAddTokenModalOpen] = useState(false);
   const { hasValidPermit } = usePermit();
 
   // Helper to get chain name from ID
@@ -563,27 +565,48 @@ export const DeployedContractsList = () => {
           <div className="flex items-center gap-3">
             <FileText className="w-6 h-6 text-primary" />
             <h2 className="text-xl font-bold text-base-content uppercase tracking-wider font-display">
-              Your Deployed Tokens (0)
+              Your Tokens (0)
             </h2>
           </div>
-          <button
-            onClick={() => setIsPermitModalOpen(true)}
-            className={`btn btn-sm ${hasValidPermit ? "btn-outline btn-primary" : "btn-fhenix"}`}
-          >
-            <Key className="w-4 h-4 mr-2" />
-            {hasValidPermit ? "Permit Active" : "Generate Permit"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsAddTokenModalOpen(true)}
+              className="btn btn-sm btn-outline btn-primary"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Token
+            </button>
+            <button
+              onClick={() => setIsPermitModalOpen(true)}
+              className={`btn btn-sm ${hasValidPermit ? "btn-outline btn-primary" : "btn-fhenix"}`}
+            >
+              <Key className="w-4 h-4 mr-2" />
+              {hasValidPermit ? "Permit Active" : "Generate Permit"}
+            </button>
+          </div>
         </div>
 
-        <div className="p-8 bg-base-100 border border-base-300 rounded-sm">
-          <p className="text-center text-base-content/60 text-base">
-            No contracts deployed yet
+        <div className="p-8 bg-base-100 border border-base-300 rounded-sm text-center">
+          <p className="text-base-content/60 text-base mb-4">
+            No tokens yet. Deploy a new token or add an existing one.
           </p>
+          <button
+            onClick={() => setIsAddTokenModalOpen(true)}
+            className="btn btn-fhenix"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Existing Token
+          </button>
         </div>
 
         <PermitModal
           isOpen={isPermitModalOpen}
           onClose={() => setIsPermitModalOpen(false)}
+        />
+
+        <AddTokenModal
+          isOpen={isAddTokenModalOpen}
+          onClose={() => setIsAddTokenModalOpen(false)}
         />
       </div>
     );
@@ -596,16 +619,25 @@ export const DeployedContractsList = () => {
         <div className="flex items-center gap-3">
           <FileText className="w-6 h-6 text-primary" />
           <h2 className="text-xl font-bold text-base-content uppercase tracking-wider font-display">
-            Your Deployed Tokens ({userContracts.length})
+            Your Tokens ({userContracts.length})
           </h2>
         </div>
-        <button
-          onClick={() => setIsPermitModalOpen(true)}
-          className={`btn btn-sm ${hasValidPermit ? "btn-outline btn-primary" : "btn-fhenix"}`}
-        >
-          <Key className="w-4 h-4 mr-2" />
-          {hasValidPermit ? "Permit Active" : "Generate Permit"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsAddTokenModalOpen(true)}
+            className="btn btn-sm btn-outline btn-primary"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Token
+          </button>
+          <button
+            onClick={() => setIsPermitModalOpen(true)}
+            className={`btn btn-sm ${hasValidPermit ? "btn-outline btn-primary" : "btn-fhenix"}`}
+          >
+            <Key className="w-4 h-4 mr-2" />
+            {hasValidPermit ? "Permit Active" : "Generate Permit"}
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -628,6 +660,11 @@ export const DeployedContractsList = () => {
       <PermitModal
         isOpen={isPermitModalOpen}
         onClose={() => setIsPermitModalOpen(false)}
+      />
+
+      <AddTokenModal
+        isOpen={isAddTokenModalOpen}
+        onClose={() => setIsAddTokenModalOpen(false)}
       />
     </div>
   );
