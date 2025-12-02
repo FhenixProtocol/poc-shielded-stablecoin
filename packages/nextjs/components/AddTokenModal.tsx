@@ -47,7 +47,7 @@ export const AddTokenModal = ({ isOpen, onClose }: AddTokenModalProps) => {
   }, [isOpen, currentChainId, selectedChainId]);
 
   // Check if address is valid
-  const isValidAddress = tokenAddress && isAddress(tokenAddress);
+  const isValidAddress = Boolean(tokenAddress && isAddress(tokenAddress));
 
   // Check if we're on the correct chain to read contract
   const isCorrectChain = selectedChainId === currentChainId;
