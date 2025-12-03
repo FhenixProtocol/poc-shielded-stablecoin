@@ -30,6 +30,10 @@ import {
   useDeployedContractsStore,
   DeployedContract,
 } from "@/services/store/deployedContractsStore";
+import {
+  getBlockExplorerTxUrl,
+  formatTxHash,
+} from "@/utils/blockExplorer";
 
 type TransferMode = "public" | "private";
 
@@ -488,7 +492,7 @@ export const TokenInteraction = () => {
               )}
 
               {/* Success Display */}
-              {isSuccess && (
+              {isSuccess && selectedToken && (
                 <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-sm">
                   <div className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
@@ -497,9 +501,14 @@ export const TokenInteraction = () => {
                         Transfer successful!
                       </p>
                       {hash && (
-                        <p className="text-xs text-green-500/70 font-mono mt-1 truncate">
-                          Tx: {hash.slice(0, 10)}...{hash.slice(-8)}
-                        </p>
+                        <a
+                          href={getBlockExplorerTxUrl(selectedToken.chainId, hash)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-green-500/70 font-mono mt-1 hover:text-green-500 hover:underline inline-block"
+                        >
+                          Tx: {formatTxHash(hash)}
+                        </a>
                       )}
                     </div>
                   </div>

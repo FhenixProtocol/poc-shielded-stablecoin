@@ -123,6 +123,7 @@ export const WizardControls = () => {
         transactionHash={deployedTxHash || ""}
         tokenName={name}
         tokenSymbol={symbol}
+        chainId={chain?.id}
         chainName={chain?.name}
       />
     </div>

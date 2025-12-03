@@ -24,6 +24,10 @@ import {
 import { parseUnits, formatUnits } from "viem";
 import { abi } from "@/utils/contract";
 import { DeployedContract } from "@/services/store/deployedContractsStore";
+import {
+  getBlockExplorerTxUrl,
+  formatTxHash,
+} from "@/utils/blockExplorer";
 
 interface ShieldUnshieldModalProps {
   isOpen: boolean;
@@ -592,9 +596,14 @@ export const ShieldUnshieldModal = ({
                         Tokens claimed successfully!
                       </p>
                       {hash && (
-                        <p className="text-xs text-green-500/70 font-mono mt-1 truncate">
-                          Tx: {hash}
-                        </p>
+                        <a
+                          href={getBlockExplorerTxUrl(contract.chainId, hash)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-green-500/70 font-mono mt-1 hover:text-green-500 hover:underline inline-block"
+                        >
+                          Tx: {formatTxHash(hash)}
+                        </a>
                       )}
                     </div>
                   </div>
@@ -683,9 +692,14 @@ export const ShieldUnshieldModal = ({
                     Tokens shielded successfully!
                   </p>
                   {hash && (
-                    <p className="text-xs text-green-500/70 font-mono mt-1 truncate">
-                      Tx: {hash}
-                    </p>
+                    <a
+                      href={getBlockExplorerTxUrl(contract.chainId, hash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-green-500/70 font-mono mt-1 hover:text-green-500 hover:underline inline-block"
+                    >
+                      Tx: {formatTxHash(hash)}
+                    </a>
                   )}
                 </div>
               </div>

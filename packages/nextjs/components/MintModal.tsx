@@ -23,6 +23,10 @@ import { parseUnits } from "viem";
 import { abi } from "@/utils/contract";
 import { usePermit } from "@/hooks/usePermit";
 import { DeployedContract } from "@/services/store/deployedContractsStore";
+import {
+  getBlockExplorerTxUrl,
+  formatTxHash,
+} from "@/utils/blockExplorer";
 
 interface MintModalProps {
   isOpen: boolean;
@@ -357,9 +361,14 @@ export const MintModal = ({
                     Tokens minted successfully!
                   </p>
                   {hash && (
-                    <p className="text-xs text-green-500/70 font-mono mt-1 truncate">
-                      Tx: {hash}
-                    </p>
+                    <a
+                      href={getBlockExplorerTxUrl(contract.chainId, hash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-green-500/70 font-mono mt-1 hover:text-green-500 hover:underline inline-block"
+                    >
+                      Tx: {formatTxHash(hash)}
+                    </a>
                   )}
                 </div>
               </div>

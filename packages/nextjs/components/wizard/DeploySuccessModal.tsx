@@ -1,8 +1,10 @@
 "use client";
 
-import { X, CheckCircle2, Copy, ExternalLink } from "lucide-react";
+import { X, CheckCircle2, Copy, ExternalLink, Coins } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { getBlockExplorerTxUrl } from "@/utils/blockExplorer";
+import { useNavigationStore } from "@/services/store/navigationStore";
 
 interface DeploySuccessModalProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface DeploySuccessModalProps {
   transactionHash: string;
   tokenName: string;
   tokenSymbol: string;
+  chainId?: number;
   chainName?: string;
 }
 
@@ -21,8 +24,10 @@ export const DeploySuccessModal = ({
   transactionHash,
   tokenName,
   tokenSymbol,
+  chainId,
   chainName,
 }: DeploySuccessModalProps) => {
+  const { setActiveTab } = useNavigationStore();
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -125,12 +130,21 @@ export const DeploySuccessModal = ({
                 <Copy className="w-4 h-4" />
               </button>
             </div>
+            <a
+              href={getBlockExplorerTxUrl(chainId || 11155111, transactionHash)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+            >
+              View on Explorer
+              <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
 
           {/* Info Note */}
           <div className="p-3 bg-base-200 border border-base-300 rounded-sm">
             <p className="text-xs text-base-content/60">
-              <span className="text-primary font-semibold">Tip:</span> Your contract has been saved locally. 
+              <span className="text-primary font-semibold">Tip:</span> Your contract has been saved locally.
               You can view and manage your deployed contracts from the dashboard.
             </p>
           </div>
@@ -144,17 +158,18 @@ export const DeploySuccessModal = ({
           >
             Close
           </button>
-          <a
-            href={`https://etherscan.io/address/${contractAddress}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => {
+              setActiveTab("manage");
+              onClose();
+            }}
             className="flex-1 btn btn-fhenix font-bold tracking-wider rounded-sm relative overflow-hidden group/btn font-display uppercase"
           >
             <span className="relative z-10 flex items-center gap-2">
-              View on Explorer
-              <ExternalLink className="w-4 h-4" />
+              View Tokens
+              <Coins className="w-4 h-4" />
             </span>
-          </a>
+          </button>
         </div>
       </div>
     </div>

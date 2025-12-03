@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock } from "lucide-react";
+import { Lock, LockOpen } from "lucide-react";
 
 interface SecuritySettingsProps {
   isShielded: boolean;
@@ -21,21 +21,29 @@ export const SecuritySettings = ({
         <span className="h-px flex-1 bg-base-300"></span>
       </div>
 
-      <div className="form-control w-full">
-        <label className="label cursor-pointer justify-between items-center py-0">
-          <span className="label-text font-bold text-base-content flex items-center gap-2 font-display tracking-wide">
-            <Lock className="w-4 h-4 text-primary" />
-            SHIELD MODE
-          </span>
-          <input
-            type="checkbox"
-            className="toggle toggle-primary border-primary bg-primary hover:bg-primary toggle-sm"
-            checked={isShielded}
-            onChange={(e) => onShieldedChange(e.target.checked)}
-          />
-        </label>
-      </div>
+      <button
+        type="button"
+        onClick={() => onShieldedChange(!isShielded)}
+        className={`btn w-full font-bold tracking-wider rounded-sm relative overflow-hidden group/btn h-12 font-display uppercase ${
+          isShielded
+            ? "btn-outline border-error text-error hover:bg-error hover:text-error-content"
+            : "btn-fhenix"
+        }`}
+      >
+        <span className="relative z-10 flex items-center gap-2">
+          {isShielded ? (
+            <>
+              <LockOpen className="w-4 h-4" />
+              REMOVE CONFIDENTIALITY
+            </>
+          ) : (
+            <>
+              <Lock className="w-4 h-4" />
+              ADD CONFIDENTIALITY
+            </>
+          )}
+        </span>
+      </button>
     </div>
   );
 };
-
