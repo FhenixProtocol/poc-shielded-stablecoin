@@ -66,7 +66,7 @@ export const TokenDetailsForm = ({
           </label>
           <input
             type="number"
-            placeholder="18"
+            placeholder="06"
             className="input input-bordered w-full bg-base-200 border-base-300 focus:border-primary focus:ring-1 focus:ring-primary/50 rounded-sm transition-all text-base-content placeholder:text-base-content/30 no-spinners font-mono text-sm"
             value={decimals}
             onChange={(e) => onDecimalsChange(Number(e.target.value))}
@@ -78,4 +78,3 @@ export const TokenDetailsForm = ({
     </div>
   );
 };
-

@@ -14,11 +14,10 @@ interface WizardState {
 export const useWizardStore = create<WizardState>((set) => ({
   name: "Fhenix USD",
   symbol: "FUSD",
-  decimals: 18,
+  decimals: 6,
   isShielded: true,
   setName: (name) => set({ name }),
   setSymbol: (symbol) => set({ symbol }),
   setDecimals: (decimals) => set({ decimals }),
   setIsShielded: (isShielded) => set({ isShielded }),
 }));
-
