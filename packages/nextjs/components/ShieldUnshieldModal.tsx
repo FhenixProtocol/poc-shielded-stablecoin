@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Eye,
 } from "lucide-react";
 import {
   useAccount,
@@ -28,6 +29,9 @@ import {
   getBlockExplorerTxUrl,
   formatTxHash,
 } from "@/utils/blockExplorer";
+import { cofhejs, FheTypes } from "cofhejs/web";
+import { usePermit } from "@/hooks/usePermit";
+import { useCofheStore } from "@/services/store/cofheStore";
 
 interface ShieldUnshieldModalProps {
   isOpen: boolean;
@@ -58,6 +62,8 @@ export const ShieldUnshieldModal = ({
   const currentChainId = useChainId();
   const chains = useChains();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
+  const { hasValidPermit } = usePermit();
+  const { isInitialized } = useCofheStore();
 
   const [mode, setMode] = useState<Mode>("shield");
   const [amount, setAmount] = useState("");
@@ -66,6 +72,11 @@ export const ShieldUnshieldModal = ({
     "request" | "waiting" | "claim"
   >("request");
   const [isPolling, setIsPolling] = useState(false);
+
+  // Shielded balance reveal state
+  const [revealedShieldedBalance, setRevealedShieldedBalance] = useState<bigint | null>(null);
+  const [isRevealingBalance, setIsRevealingBalance] = useState(false);
+  const [revealError, setRevealError] = useState<string | null>(null);
 
   const {
     data: hash,
@@ -95,6 +106,19 @@ export const ShieldUnshieldModal = ({
     },
   });
 
+  // Read confidential balance (ctHash) for unshield mode
+  const { data: confidentialBalance } = useReadContract({
+    address: contract.address as `0x${string}`,
+    abi,
+    functionName: "confidentialBalanceOf",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && mode === "unshield",
+    },
+  });
+
+  const ctHash = confidentialBalance as bigint | undefined;
+
   // Check if we're on the correct chain
   const isCorrectChain = currentChainId === contract.chainId;
   const contractChainName =
@@ -105,6 +129,80 @@ export const ShieldUnshieldModal = ({
   const formattedPublicBalance = publicBalance
     ? formatUnits(publicBalance, contract.decimals)
     : "0";
+
+  const formattedShieldedBalance = revealedShieldedBalance !== null
+    ? formatUnits(revealedShieldedBalance, 6) // Shielded tokens use 6 decimals
+    : null;
+
+  // Check if amount exceeds balance
+  const getAmountExceedsBalance = () => {
+    if (!amount) return false;
+    try {
+      if (mode === "shield") {
+        if (!publicBalance) return false;
+        const parsedAmount = parseUnits(amount, contract.decimals);
+        return parsedAmount > publicBalance;
+      } else {
+        // Unshield mode - check against revealed shielded balance
+        if (revealedShieldedBalance === null) return false;
+        const parsedAmount = parseUnits(amount, 6); // Shielded uses 6 decimals
+        return parsedAmount > revealedShieldedBalance;
+      }
+    } catch {
+      return false;
+    }
+  };
+  const amountExceedsBalance = getAmountExceedsBalance();
+
+  // Handle revealing shielded balance
+  const handleRevealBalance = async () => {
+    if (ctHash === undefined || !hasValidPermit || !isInitialized) {
+      return;
+    }
+
+    // If ctHash is 0, no shielded balance exists yet
+    if (ctHash === BigInt(0)) {
+      setRevealedShieldedBalance(BigInt(0));
+      return;
+    }
+
+    setIsRevealingBalance(true);
+    setRevealError(null);
+    try {
+      const result = await cofhejs.unseal(ctHash, FheTypes.Uint64);
+
+      if (result?.success && result?.data !== undefined) {
+        setRevealedShieldedBalance(BigInt(result.data.toString()));
+      } else {
+        const errorMessage =
+          result?.error?.message || String(result?.error) || "";
+
+        if (
+          errorMessage.includes("sealed data not found") ||
+          errorMessage.includes("400 Bad Request") ||
+          errorMessage.includes("Failed to fetch full ciphertext")
+        ) {
+          setRevealedShieldedBalance(BigInt(0));
+        } else {
+          setRevealError("Failed to decrypt balance");
+        }
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      if (
+        errorMessage.includes("sealed data not found") ||
+        errorMessage.includes("400 Bad Request") ||
+        errorMessage.includes("Failed to fetch full ciphertext")
+      ) {
+        setRevealedShieldedBalance(BigInt(0));
+      } else {
+        setRevealError("Decryption error");
+      }
+    } finally {
+      setIsRevealingBalance(false);
+    }
+  };
 
   // Parse the unshield claim data
   const claimData = unshieldClaim as UnshieldClaim | undefined;
@@ -198,6 +296,8 @@ export const ShieldUnshieldModal = ({
     setMode("shield");
     setUnshieldStep("request");
     setClaimCompleted(false);
+    setRevealedShieldedBalance(null);
+    setRevealError(null);
     resetWrite();
     onClose();
   };
@@ -343,11 +443,12 @@ export const ShieldUnshieldModal = ({
   const isButtonDisabled = () => {
     if (isPending || !isCorrectChain) return true;
     if (mode === "shield") {
-      return !amount || isTxSuccess;
+      return !amount || isTxSuccess || amountExceedsBalance;
     } else {
       if (claimCompleted) return true;
       if (unshieldStep === "request") {
-        return !amount;
+        // For unshield, require revealed balance and valid amount
+        return !amount || revealedShieldedBalance === null || amountExceedsBalance;
       } else if (unshieldStep === "waiting") {
         return true;
       } else {
@@ -632,30 +733,116 @@ export const ShieldUnshieldModal = ({
                     {contract.symbol}
                   </button>
                 )}
+                {mode === "unshield" && revealedShieldedBalance !== null && formattedShieldedBalance && (
+                  <button
+                    onClick={() => setAmount(formattedShieldedBalance)}
+                    disabled={isPending}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Max: {parseFloat(formattedShieldedBalance).toFixed(2)}{" "}
+                    {contract.symbol}
+                  </button>
+                )}
               </div>
-              <div className="relative">
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  disabled={isPending || !isCorrectChain}
-                  className="input input-bordered w-full pr-16 font-mono text-lg bg-base-200 border-base-300 focus:border-primary text-base-content placeholder:text-base-content/40"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-mono text-base-content/60">
-                  {contract.symbol}
-                </span>
-              </div>
-              {mode === "unshield" && (
-                <p className="text-xs text-base-content/40">
-                  Note: Shielded tokens use 6 decimal precision
-                </p>
+
+              {/* Reveal Balance Section for Unshield */}
+              {mode === "unshield" && revealedShieldedBalance === null && unshieldStep === "request" && (
+                <div className="p-4 bg-base-200 border border-base-300 rounded-sm space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-pixel text-primary uppercase">
+                      Reveal Balance First
+                    </span>
+                  </div>
+                  <p className="text-xs text-base-content/60">
+                    You need to reveal your shielded balance before you can unshield tokens.
+                  </p>
+                  {!hasValidPermit ? (
+                    <p className="text-xs text-yellow-500">
+                      A permit is required to reveal your balance. Please generate one first.
+                    </p>
+                  ) : (
+                    <button
+                      onClick={handleRevealBalance}
+                      disabled={isRevealingBalance || !isInitialized}
+                      className="btn btn-sm btn-primary"
+                    >
+                      {isRevealingBalance ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Revealing...
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Reveal Balance
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {revealError && (
+                    <p className="text-xs text-red-500">{revealError}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Revealed Balance Display for Unshield */}
+              {mode === "unshield" && revealedShieldedBalance !== null && formattedShieldedBalance && unshieldStep === "request" && (
+                <div className="p-3 bg-primary/10 border border-primary/30 rounded-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-pixel text-primary uppercase">
+                      Your Shielded Balance
+                    </span>
+                    <span className="text-sm font-mono font-bold text-primary">
+                      {parseFloat(formattedShieldedBalance).toFixed(2)} {contract.symbol}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Amount Input - Only show when balance is revealed for unshield, or always for shield */}
+              {(mode === "shield" || (mode === "unshield" && revealedShieldedBalance !== null)) && (
+                <>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      disabled={isPending || !isCorrectChain}
+                      className="input input-bordered w-full pr-16 font-mono text-lg bg-base-200 border-base-300 focus:border-primary text-base-content placeholder:text-base-content/40"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-mono text-base-content/60">
+                      {contract.symbol}
+                    </span>
+                  </div>
+                  {mode === "unshield" && (
+                    <p className="text-xs text-base-content/40">
+                      Note: Shielded tokens use 6 decimal precision
+                    </p>
+                  )}
+                </>
               )}
             </div>
           )}
 
+          {/* Amount Exceeds Balance Warning */}
+          {amountExceedsBalance && (
+            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-sm">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-500">
+                  {mode === "shield"
+                    ? `Amount exceeds your public balance of ${parseFloat(formattedPublicBalance).toFixed(2)} ${contract.symbol}`
+                    : `Amount exceeds your shielded balance of ${formattedShieldedBalance ? parseFloat(formattedShieldedBalance).toFixed(2) : "0"} ${contract.symbol}`
+                  }
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Error Display */}
-          {(error || writeError) && (
+          {(error || writeError) && !amountExceedsBalance && (
             <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-sm">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
@@ -709,27 +896,36 @@ export const ShieldUnshieldModal = ({
 
         {/* Actions */}
         <div className="p-4 border-t border-base-300">
-          <button
-            onClick={handleSubmit}
-            disabled={isButtonDisabled()}
-            className="btn btn-fhenix w-full h-12 font-display uppercase tracking-wide"
-          >
-            {isPending || isPolling ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                {getButtonText()}
-              </>
-            ) : (
-              <>
-                {mode === "shield" ? (
-                  <ArrowDownToLine className="w-5 h-5 mr-2" />
-                ) : (
-                  <ArrowUpFromLine className="w-5 h-5 mr-2" />
-                )}
-                {getButtonText()}
-              </>
-            )}
-          </button>
+          {(mode === "shield" && isTxSuccess) || (mode === "unshield" && claimCompleted) ? (
+            <button
+              onClick={handleClose}
+              className="btn bg-base-300 border-base-300 hover:bg-base-200 text-base-content w-full h-12 font-display uppercase tracking-wide"
+            >
+              Close
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={isButtonDisabled()}
+              className="btn btn-fhenix w-full h-12 font-display uppercase tracking-wide"
+            >
+              {isPending || isPolling ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  {getButtonText()}
+                </>
+              ) : (
+                <>
+                  {mode === "shield" ? (
+                    <ArrowDownToLine className="w-5 h-5 mr-2" />
+                  ) : (
+                    <ArrowUpFromLine className="w-5 h-5 mr-2" />
+                  )}
+                  {getButtonText()}
+                </>
+              )}
+            </button>
+          )}
 
           {!address && (
             <p className="text-center text-xs font-pixel text-base-content/40 uppercase tracking-widest mt-3">

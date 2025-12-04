@@ -21,7 +21,6 @@ import {
 } from "wagmi";
 import { parseUnits } from "viem";
 import { abi } from "@/utils/contract";
-import { usePermit } from "@/hooks/usePermit";
 import { DeployedContract } from "@/services/store/deployedContractsStore";
 import {
   getBlockExplorerTxUrl,
@@ -47,7 +46,6 @@ export const MintModal = ({
   const currentChainId = useChainId();
   const chains = useChains();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
-  const { hasValidPermit } = usePermit();
 
   const [mintMode, setMintMode] = useState<MintMode>("public");
   const [amount, setAmount] = useState("");
@@ -151,8 +149,6 @@ export const MintModal = ({
     if (isSuccess) return "Success!";
     return mintMode === "public" ? "Mint Tokens" : "Mint Shielded Tokens";
   };
-
-  const canMintPrivate = hasValidPermit;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -270,35 +266,6 @@ export const MintModal = ({
             )}
           </div>
 
-          {/* Private Mint Requirements */}
-          {mintMode === "private" && (
-            <div className="p-3 bg-base-200 border border-base-300 rounded-sm space-y-2">
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-primary" />
-                <span className="text-xs font-pixel text-primary uppercase">
-                  Shielded Mint Requirements
-                </span>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-base-content/60">Permit Active</span>
-                  <span
-                    className={
-                      hasValidPermit ? "text-green-500" : "text-yellow-500"
-                    }
-                  >
-                    {hasValidPermit ? "Active" : "Required"}
-                  </span>
-                </div>
-              </div>
-              {!canMintPrivate && (
-                <p className="text-xs text-yellow-500">
-                  Generate a permit first to mint shielded tokens
-                </p>
-              )}
-            </div>
-          )}
-
           {/* Recipient Display */}
           <div className="space-y-2">
             <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
@@ -378,33 +345,36 @@ export const MintModal = ({
 
         {/* Actions */}
         <div className="p-4 border-t border-base-300">
-          <button
-            onClick={handleMint}
-            disabled={
-              isPending ||
-              !amount ||
-              isSuccess ||
-              !isCorrectChain ||
-              (mintMode === "private" && !canMintPrivate)
-            }
-            className="btn btn-fhenix w-full h-12 font-display uppercase tracking-wide"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                {getButtonText()}
-              </>
-            ) : (
-              <>
-                {mintMode === "private" ? (
-                  <Shield className="w-5 h-5 mr-2" />
-                ) : (
-                  <Plus className="w-5 h-5 mr-2" />
-                )}
-                {getButtonText()}
-              </>
-            )}
-          </button>
+          {isSuccess ? (
+            <button
+              onClick={handleClose}
+              className="btn bg-base-300 border-base-300 hover:bg-base-200 text-base-content w-full h-12 font-display uppercase tracking-wide"
+            >
+              Close
+            </button>
+          ) : (
+            <button
+              onClick={handleMint}
+              disabled={isPending || !amount || !isCorrectChain}
+              className="btn btn-fhenix w-full h-12 font-display uppercase tracking-wide"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  {getButtonText()}
+                </>
+              ) : (
+                <>
+                  {mintMode === "private" ? (
+                    <Shield className="w-5 h-5 mr-2" />
+                  ) : (
+                    <Plus className="w-5 h-5 mr-2" />
+                  )}
+                  {getButtonText()}
+                </>
+              )}
+            </button>
+          )}
 
           {!address && (
             <p className="text-center text-xs font-pixel text-base-content/40 uppercase tracking-widest mt-3">

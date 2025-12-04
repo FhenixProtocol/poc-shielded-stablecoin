@@ -15,7 +15,7 @@ export const useWizardStore = create<WizardState>((set) => ({
   name: "Fhenix USD",
   symbol: "FUSD",
   decimals: 6,
-  isShielded: true,
+  isShielded: false,
   setName: (name) => set({ name }),
   setSymbol: (symbol) => set({ symbol }),
   setDecimals: (decimals) => set({ decimals }),

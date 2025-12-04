@@ -84,8 +84,8 @@ export const PermitModal = ({ isOpen, onClose }: PermitModalProps) => {
               <div className="space-y-2">
                 <p className="text-sm text-base-content">
                   A permit is required to view your encrypted (shielded)
-                  balances. It authorizes the decryption of your confidential
-                  data.
+                  balances. Click &quot;Generate&quot; and sign the message in
+                  your wallet to create one.
                 </p>
                 <p className="text-xs text-base-content/60">
                   Permits are stored locally and are chain-specific.

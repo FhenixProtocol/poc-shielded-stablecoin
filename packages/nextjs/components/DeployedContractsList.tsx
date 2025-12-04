@@ -82,16 +82,17 @@ const DecryptingAnimation = ({ symbol }: { symbol: string }) => {
 const ShieldedBalanceDisplay = ({
   contract,
   ctHash,
+  onOpenPermitModal,
 }: {
   contract: DeployedContract;
   ctHash: bigint | undefined;
+  onOpenPermitModal: () => void;
 }) => {
   const { hasValidPermit } = usePermit();
   const { isInitialized } = useCofheStore();
   const [isRevealing, setIsRevealing] = useState(false);
   const [revealedBalance, setRevealedBalance] = useState<bigint | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastCtHash, setLastCtHash] = useState<bigint | undefined>(undefined);
 
@@ -106,7 +107,13 @@ const ShieldedBalanceDisplay = ({
   }, [ctHash, lastCtHash]);
 
   const handleToggleVisibility = async () => {
-    if (ctHash === undefined || !hasValidPermit || !isInitialized) return;
+    // If no permit, open the permit modal instead
+    if (!hasValidPermit) {
+      onOpenPermitModal();
+      return;
+    }
+
+    if (ctHash === undefined || !isInitialized) return;
     console.log(ctHash);
 
     // If already revealed, just toggle visibility
@@ -207,41 +214,24 @@ const ShieldedBalanceDisplay = ({
         <p className="text-xs font-pixel text-primary uppercase">
           Shielded Balance
         </p>
-        <div className="relative">
-          <button
-            onClick={handleToggleVisibility}
-            disabled={!hasValidPermit || isRevealing || !hasCtHash}
-            onMouseEnter={() => !hasValidPermit && setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
-            className={`btn btn-ghost btn-xs ${
-              hasValidPermit && hasCtHash
-                ? "text-primary hover:bg-primary/10"
-                : "text-base-content/30 cursor-not-allowed"
-            }`}
-          >
-            {isRevealing ? (
-              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            ) : isVisible && revealedBalance !== null ? (
-              <EyeOff className="w-4 h-4" />
-            ) : (
-              <Eye className="w-4 h-4" />
-            )}
-          </button>
-
-          {/* Tooltip for no permit */}
-          {showTooltip && !hasValidPermit && (
-            <div className="absolute bottom-full right-0 mb-2 z-50">
-              <div className="bg-base-200 border border-primary/30 rounded-sm p-2 shadow-lg whitespace-nowrap">
-                <div className="flex items-center gap-2">
-                  <Key className="w-3 h-3 text-primary" />
-                  <p className="text-xs text-base-content">
-                    Generate permit to reveal
-                  </p>
-                </div>
-              </div>
-            </div>
+        <button
+          onClick={handleToggleVisibility}
+          disabled={isRevealing || !hasCtHash}
+          className={`btn btn-ghost btn-xs ${
+            hasCtHash
+              ? "text-primary hover:bg-primary/10"
+              : "text-base-content/30 cursor-not-allowed"
+          }`}
+          title={!hasValidPermit ? "Click to generate permit" : undefined}
+        >
+          {isRevealing ? (
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          ) : isVisible && revealedBalance !== null ? (
+            <EyeOff className="w-4 h-4" />
+          ) : (
+            <Eye className="w-4 h-4" />
           )}
-        </div>
+        </button>
       </div>
 
       {!hasCtHash ? (
@@ -293,12 +283,14 @@ const ContractCard = ({
   onToggle,
   onRemove,
   chainName,
+  onOpenPermitModal,
 }: {
   contract: DeployedContract;
   isExpanded: boolean;
   onToggle: () => void;
   onRemove: () => void;
   chainName: string;
+  onOpenPermitModal: () => void;
 }) => {
   const { address } = useAccount();
   const [isMintModalOpen, setIsMintModalOpen] = useState(false);
@@ -439,6 +431,7 @@ const ContractCard = ({
             <ShieldedBalanceDisplay
               contract={contract}
               ctHash={confidentialBalance as bigint | undefined}
+              onOpenPermitModal={onOpenPermitModal}
             />
           </div>
 
@@ -659,6 +652,7 @@ export const DeployedContractsList = () => {
             onToggle={() => toggleExpand(contract.address)}
             onRemove={() => removeContract(contract.address)}
             chainName={getChainName(contract.chainId)}
+            onOpenPermitModal={() => setIsPermitModalOpen(true)}
           />
         ))}
       </div>
