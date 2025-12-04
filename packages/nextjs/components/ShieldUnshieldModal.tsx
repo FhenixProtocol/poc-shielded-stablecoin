@@ -605,20 +605,44 @@ export const ShieldUnshieldModal = ({
               <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
                 Unshield Progress
               </label>
-              <div className="flex items-center gap-2">
-                {/* Step 1 */}
-                <div
-                  className={`flex-1 flex items-center gap-2 p-2 rounded-sm border ${
-                    unshieldStep === "request" && !claimCompleted
-                      ? "border-primary bg-primary/10"
-                      : "border-green-500/30 bg-green-500/10"
-                  }`}
-                >
-                  {unshieldStep === "request" && !claimCompleted ? (
-                    <div className="w-4 h-4 rounded-full border-2 border-primary" />
-                  ) : (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  )}
+              <div className="relative flex items-center justify-between px-2">
+                {/* Connector Lines */}
+                <div className="absolute top-4 left-[calc(16.67%+8px)] right-[calc(16.67%+8px)] h-0.5 bg-base-300">
+                  {/* First segment - Request to Decrypt */}
+                  <div
+                    className={`absolute left-0 h-full transition-all duration-300 ${
+                      unshieldStep !== "request" || claimCompleted
+                        ? "w-1/2 bg-green-500"
+                        : "w-0"
+                    }`}
+                  />
+                  {/* Second segment - Decrypt to Claim */}
+                  <div
+                    className={`absolute left-1/2 h-full transition-all duration-300 ${
+                      unshieldStep === "claim" || claimCompleted
+                        ? "w-1/2 bg-green-500"
+                        : unshieldStep === "waiting"
+                          ? "w-1/4 bg-yellow-500"
+                          : "w-0"
+                    }`}
+                  />
+                </div>
+
+                {/* Step 1 - Request */}
+                <div className="flex flex-col items-center gap-2 z-10">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      unshieldStep === "request" && !claimCompleted
+                        ? "bg-primary text-primary-content ring-4 ring-primary/20"
+                        : "bg-green-500 text-white"
+                    }`}
+                  >
+                    {unshieldStep === "request" && !claimCompleted ? (
+                      <span className="text-xs font-bold">1</span>
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4" />
+                    )}
+                  </div>
                   <span className={`text-xs font-medium ${
                     unshieldStep === "request" && !claimCompleted
                       ? "text-primary"
@@ -626,23 +650,25 @@ export const ShieldUnshieldModal = ({
                   }`}>Request</span>
                 </div>
 
-                {/* Step 2 */}
-                <div
-                  className={`flex-1 flex items-center gap-2 p-2 rounded-sm border ${
-                    unshieldStep === "waiting"
-                      ? "border-yellow-500 bg-yellow-500/10"
-                      : unshieldStep === "claim" || claimCompleted
-                        ? "border-green-500/30 bg-green-500/10"
-                        : "border-base-300"
-                  }`}
-                >
-                  {unshieldStep === "waiting" ? (
-                    <Clock className="w-4 h-4 text-yellow-500 animate-pulse" />
-                  ) : unshieldStep === "claim" || claimCompleted ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <div className="w-4 h-4 rounded-full border-2 border-base-300" />
-                  )}
+                {/* Step 2 - Decrypt */}
+                <div className="flex flex-col items-center gap-2 z-10">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      unshieldStep === "waiting"
+                        ? "bg-yellow-500 text-white ring-4 ring-yellow-500/20"
+                        : unshieldStep === "claim" || claimCompleted
+                          ? "bg-green-500 text-white"
+                          : "bg-base-300 text-base-content/40"
+                    }`}
+                  >
+                    {unshieldStep === "waiting" ? (
+                      <Clock className="w-4 h-4 animate-pulse" />
+                    ) : unshieldStep === "claim" || claimCompleted ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                      <span className="text-xs font-bold">2</span>
+                    )}
+                  </div>
                   <span className={`text-xs font-medium ${
                     unshieldStep === "waiting"
                       ? "text-yellow-600"
@@ -652,27 +678,23 @@ export const ShieldUnshieldModal = ({
                   }`}>Decrypt</span>
                 </div>
 
-                {/* Step 3 */}
-                <div
-                  className={`flex-1 flex items-center gap-2 p-2 rounded-sm border ${
-                    claimCompleted
-                      ? "border-green-500/30 bg-green-500/10"
-                      : unshieldStep === "claim"
-                        ? "border-primary bg-primary/10"
-                        : "border-base-300"
-                  }`}
-                >
-                  {claimCompleted ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 ${
-                        unshieldStep === "claim"
-                          ? "border-primary"
-                          : "border-base-300"
-                      }`}
-                    />
-                  )}
+                {/* Step 3 - Claim */}
+                <div className="flex flex-col items-center gap-2 z-10">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      claimCompleted
+                        ? "bg-green-500 text-white"
+                        : unshieldStep === "claim"
+                          ? "bg-primary text-primary-content ring-4 ring-primary/20"
+                          : "bg-base-300 text-base-content/40"
+                    }`}
+                  >
+                    {claimCompleted ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                      <span className="text-xs font-bold">3</span>
+                    )}
+                  </div>
                   <span className={`text-xs font-medium ${
                     claimCompleted
                       ? "text-green-600"
