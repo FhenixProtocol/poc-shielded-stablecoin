@@ -549,25 +549,25 @@ export const TokenInteraction = () => {
         </div>
 
         {/* Vault Section */}
-        <div className="bg-base-100 border border-base-300 rounded-sm p-6 relative overflow-hidden opacity-75">
+        <div className="bg-base-100 border border-base-300 rounded-sm p-6 relative overflow-hidden">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-base-200 rounded-sm">
-              <Vault className="w-6 h-6 text-base-content/40" />
+            <div className="p-2 bg-base-200 rounded-sm opacity-50">
+              <Vault className="w-6 h-6 text-base-content" />
             </div>
-            <h2 className="text-xl font-bold text-base-content/60 uppercase tracking-wider font-display">
+            <h2 className="text-xl font-bold text-base-content uppercase tracking-wider font-display">
               Vault
             </h2>
-            <span className="px-2 py-0.5 bg-base-200 text-[10px] font-bold text-base-content/40 uppercase tracking-wider rounded-sm">
+            <span className="px-2 py-0.5 bg-base-200 text-[10px] font-bold text-base-content/50 uppercase tracking-wider rounded-sm">
               Coming Soon
             </span>
           </div>
 
           <div className="space-y-4">
-            <p className="text-base-content/40 text-sm">
+            <p className="text-base-content/50 text-sm">
               Securely store your assets in a private vault.
             </p>
-            <div className="p-4 bg-base-200 border border-base-300 rounded-sm text-center">
-              <span className="text-xs font-pixel text-base-content/40 uppercase tracking-widest">
+            <div className="p-4 bg-base-200 border border-base-300 rounded-sm text-center opacity-50">
+              <span className="text-xs font-pixel text-base-content uppercase tracking-widest">
                 {"// Vault functionality in development"}
               </span>
             </div>

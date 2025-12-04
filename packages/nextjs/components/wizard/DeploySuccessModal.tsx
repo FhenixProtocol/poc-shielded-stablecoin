@@ -154,7 +154,7 @@ export const DeploySuccessModal = ({
         <div className="flex gap-3 p-4 border-t border-base-300 bg-base-200">
           <button
             onClick={onClose}
-            className="flex-1 btn bg-base-300 border-base-300 hover:bg-base-100 text-base-content font-display uppercase tracking-wider rounded-sm"
+            className="flex-1 btn bg-base-300 border-base-300 hover:bg-base-100 text-base-content font-bold tracking-wider rounded-sm h-12 font-display uppercase"
           >
             Close
           </button>
@@ -163,9 +163,9 @@ export const DeploySuccessModal = ({
               setActiveTab("manage");
               onClose();
             }}
-            className="flex-1 btn btn-fhenix font-bold tracking-wider rounded-sm relative overflow-hidden group/btn font-display uppercase"
+            className="flex-1 btn btn-fhenix font-bold tracking-wider rounded-sm h-12 font-display uppercase"
           >
-            <span className="relative z-10 flex items-center gap-2">
+            <span className="flex items-center gap-2">
               View Tokens
               <Coins className="w-4 h-4" />
             </span>

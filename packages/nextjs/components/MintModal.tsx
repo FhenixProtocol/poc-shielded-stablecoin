@@ -348,7 +348,7 @@ export const MintModal = ({
           {isSuccess ? (
             <button
               onClick={handleClose}
-              className="btn bg-base-300 border-base-300 hover:bg-base-200 text-base-content w-full h-12 font-display uppercase tracking-wide"
+              className="btn bg-base-300 border-base-300 hover:bg-base-200 text-base-content w-full font-bold tracking-wider rounded-sm h-12 font-display uppercase"
             >
               Close
             </button>
@@ -356,7 +356,7 @@ export const MintModal = ({
             <button
               onClick={handleMint}
               disabled={isPending || !amount || !isCorrectChain}
-              className="btn btn-fhenix w-full h-12 font-display uppercase tracking-wide"
+              className="btn btn-fhenix w-full font-bold tracking-wider rounded-sm h-12 font-display uppercase"
             >
               {isPending ? (
                 <>

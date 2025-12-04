@@ -619,7 +619,11 @@ export const ShieldUnshieldModal = ({
                   ) : (
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
                   )}
-                  <span className="text-xs">Request</span>
+                  <span className={`text-xs font-medium ${
+                    unshieldStep === "request" && !claimCompleted
+                      ? "text-primary"
+                      : "text-green-600"
+                  }`}>Request</span>
                 </div>
 
                 {/* Step 2 */}
@@ -639,7 +643,13 @@ export const ShieldUnshieldModal = ({
                   ) : (
                     <div className="w-4 h-4 rounded-full border-2 border-base-300" />
                   )}
-                  <span className="text-xs">Decrypt</span>
+                  <span className={`text-xs font-medium ${
+                    unshieldStep === "waiting"
+                      ? "text-yellow-600"
+                      : unshieldStep === "claim" || claimCompleted
+                        ? "text-green-600"
+                        : "text-base-content/60"
+                  }`}>Decrypt</span>
                 </div>
 
                 {/* Step 3 */}
@@ -663,7 +673,13 @@ export const ShieldUnshieldModal = ({
                       }`}
                     />
                   )}
-                  <span className="text-xs">Claim</span>
+                  <span className={`text-xs font-medium ${
+                    claimCompleted
+                      ? "text-green-600"
+                      : unshieldStep === "claim"
+                        ? "text-primary"
+                        : "text-base-content/60"
+                  }`}>Claim</span>
                 </div>
               </div>
 
@@ -899,7 +915,7 @@ export const ShieldUnshieldModal = ({
           {(mode === "shield" && isTxSuccess) || (mode === "unshield" && claimCompleted) ? (
             <button
               onClick={handleClose}
-              className="btn bg-base-300 border-base-300 hover:bg-base-200 text-base-content w-full h-12 font-display uppercase tracking-wide"
+              className="btn bg-base-300 border-base-300 hover:bg-base-200 text-base-content w-full font-bold tracking-wider rounded-sm h-12 font-display uppercase"
             >
               Close
             </button>
@@ -907,7 +923,7 @@ export const ShieldUnshieldModal = ({
             <button
               onClick={handleSubmit}
               disabled={isButtonDisabled()}
-              className="btn btn-fhenix w-full h-12 font-display uppercase tracking-wide"
+              className="btn btn-fhenix w-full font-bold tracking-wider rounded-sm h-12 font-display uppercase"
             >
               {isPending || isPolling ? (
                 <>

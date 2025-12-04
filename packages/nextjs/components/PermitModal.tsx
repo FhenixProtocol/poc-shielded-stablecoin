@@ -172,7 +172,7 @@ export const PermitModal = ({ isOpen, onClose }: PermitModalProps) => {
             <button
               onClick={handleGeneratePermit}
               disabled={!isInitialized || isGeneratingPermit || !address}
-              className="btn btn-fhenix w-full h-12 font-display uppercase tracking-wide"
+              className="btn btn-fhenix w-full font-bold tracking-wider rounded-sm h-12 font-display uppercase"
             >
               {isGeneratingPermit ? (
                 <>
@@ -190,7 +190,7 @@ export const PermitModal = ({ isOpen, onClose }: PermitModalProps) => {
             <div className="flex gap-3">
               <button
                 onClick={handleRevokePermit}
-                className="btn btn-outline btn-error flex-1 h-12 font-display uppercase tracking-wide"
+                className="btn btn-outline btn-error flex-1 font-bold tracking-wider rounded-sm h-12 font-display uppercase"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Revoke
@@ -198,7 +198,7 @@ export const PermitModal = ({ isOpen, onClose }: PermitModalProps) => {
               <button
                 onClick={handleGeneratePermit}
                 disabled={isGeneratingPermit}
-                className="btn btn-fhenix flex-1 h-12 font-display uppercase tracking-wide"
+                className="btn btn-fhenix flex-1 font-bold tracking-wider rounded-sm h-12 font-display uppercase"
               >
                 {isGeneratingPermit ? (
                   <>
