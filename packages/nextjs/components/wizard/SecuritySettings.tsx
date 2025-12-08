@@ -15,7 +15,7 @@ export const SecuritySettings = ({
     <div className="flex flex-col gap-4 mt-2">
       <div className="flex items-center gap-2">
         <span className="h-px flex-1 bg-base-300"></span>
-        <h3 className="text-[10px] font-pixel text-base-content/60 uppercase tracking-widest">
+        <h3 className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
           Security
         </h3>
         <span className="h-px flex-1 bg-base-300"></span>

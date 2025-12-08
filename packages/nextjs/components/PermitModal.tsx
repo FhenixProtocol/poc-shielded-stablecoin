@@ -97,7 +97,7 @@ export const PermitModal = ({ isOpen, onClose }: PermitModalProps) => {
           {/* Status Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-base-200 border border-base-300 rounded-sm">
-              <span className="text-xs font-pixel text-base-content/60 uppercase">
+              <span className="text-sm font-pixel text-base-content/60 uppercase">
                 Network
               </span>
               <span className="text-sm font-mono text-base-content">
@@ -106,7 +106,7 @@ export const PermitModal = ({ isOpen, onClose }: PermitModalProps) => {
             </div>
 
             <div className="flex items-center justify-between p-3 bg-base-200 border border-base-300 rounded-sm">
-              <span className="text-xs font-pixel text-base-content/60 uppercase">
+              <span className="text-sm font-pixel text-base-content/60 uppercase">
                 COFHE Status
               </span>
               <div className="flex items-center gap-2">
@@ -132,7 +132,7 @@ export const PermitModal = ({ isOpen, onClose }: PermitModalProps) => {
             </div>
 
             <div className="flex items-center justify-between p-3 bg-base-200 border border-base-300 rounded-sm">
-              <span className="text-xs font-pixel text-base-content/60 uppercase">
+              <span className="text-sm font-pixel text-base-content/60 uppercase">
                 Permit Status
               </span>
               <div className="flex items-center gap-2">
@@ -216,7 +216,7 @@ export const PermitModal = ({ isOpen, onClose }: PermitModalProps) => {
           )}
 
           {!address && (
-            <p className="text-center text-xs font-pixel text-base-content/40 uppercase tracking-widest">
+            <p className="text-center text-sm font-pixel text-base-content/40 uppercase tracking-widest">
               {"// Connect wallet to generate permit"}
             </p>
           )}

@@ -211,7 +211,7 @@ const ShieldedBalanceDisplay = ({
   return (
     <div className="p-4 bg-base-100 rounded-sm border border-primary/30">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-pixel text-primary uppercase">
+        <p className="text-sm font-pixel text-primary uppercase">
           Shielded Balance
         </p>
         <button
@@ -364,7 +364,7 @@ const ContractCard = ({
             {/* Contract Details */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-pixel text-base-content/50 uppercase tracking-widest">
+                <span className="text-sm font-pixel text-base-content/50 uppercase tracking-widest">
                   Address:
                 </span>
                 <span className="text-sm font-mono text-base-content">
@@ -374,19 +374,19 @@ const ContractCard = ({
 
               <div className="flex items-center gap-6 text-sm text-base-content/60">
                 <span className="flex items-center gap-1">
-                  <span className="text-xs font-pixel text-base-content/40 uppercase">
+                  <span className="text-sm font-pixel text-base-content/40 uppercase">
                     Decimals:
                   </span>{" "}
                   {contract.decimals}
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="text-xs font-pixel text-base-content/40 uppercase">
+                  <span className="text-sm font-pixel text-base-content/40 uppercase">
                     Chain:
                   </span>{" "}
                   {chainName}
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="text-xs font-pixel text-base-content/40 uppercase">
+                  <span className="text-sm font-pixel text-base-content/40 uppercase">
                     Deployed:
                   </span>{" "}
                   {new Date(contract.deployedAt).toLocaleDateString()}

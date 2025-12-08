@@ -211,7 +211,7 @@ export const TokenInteraction = () => {
         <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-primary"></div>
         <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-primary"></div>
 
-        <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest mb-2 block">
+        <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest mb-2 block">
           Select Token
         </label>
 
@@ -235,7 +235,7 @@ export const TokenInteraction = () => {
                 </div>
               </div>
             ) : (
-              <span className="text-base-content/40 font-pixel text-sm">
+              <span className="text-base-content/40 font-pixel text-base">
                 {"// Select a token to interact"}
               </span>
             )}
@@ -327,7 +327,7 @@ export const TokenInteraction = () => {
                 transfers.
               </p>
               <div className="p-4 bg-base-200 border border-base-300 rounded-sm text-center">
-                <span className="text-xs font-pixel text-base-content/40 uppercase tracking-widest">
+                <span className="text-sm font-pixel text-base-content/40 uppercase tracking-widest">
                   {"// Select a token to enable transfers"}
                 </span>
               </div>
@@ -367,7 +367,7 @@ export const TokenInteraction = () => {
 
               {/* Mode Toggle */}
               <div className="space-y-2">
-                <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
+                <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
                   Transfer Type
                 </label>
                 <div className="flex gap-2">
@@ -441,7 +441,7 @@ export const TokenInteraction = () => {
 
               {/* To Address Input */}
               <div className="space-y-2">
-                <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
+                <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
                   Recipient
                 </label>
                 <input
@@ -456,7 +456,7 @@ export const TokenInteraction = () => {
 
               {/* Amount Input */}
               <div className="space-y-2">
-                <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
+                <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
                   Amount
                 </label>
                 <div className="relative">
@@ -567,7 +567,7 @@ export const TokenInteraction = () => {
               Securely store your assets in a private vault.
             </p>
             <div className="p-4 bg-base-200 border border-base-300 rounded-sm text-center opacity-50">
-              <span className="text-xs font-pixel text-base-content uppercase tracking-widest">
+              <span className="text-sm font-pixel text-base-content uppercase tracking-widest">
                 {"// Vault functionality in development"}
               </span>
             </div>

@@ -118,7 +118,7 @@ export const Navbar = () => {
                 {isNetworkDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-64 bg-base-100 border border-base-300 rounded-sm shadow-2xl overflow-hidden">
                     <div className="p-2 border-b border-base-300 bg-base-200">
-                      <p className="text-[9px] font-pixel text-base-content/50 uppercase tracking-widest">
+                      <p className="text-sm font-pixel text-base-content/50 uppercase tracking-widest">
                         {"// Select Network"}
                       </p>
                     </div>

@@ -142,7 +142,7 @@ export const CodePreview = () => {
       </div>
 
       {/* Bottom Status Bar */}
-      <div className="h-7 bg-base-200 border-t border-base-300 flex items-center px-4 justify-between text-[10px] font-pixel text-base-content/40 uppercase tracking-widest"></div>
+      <div className="h-7 bg-base-200 border-t border-base-300 flex items-center px-4 justify-between text-sm font-pixel text-base-content/40 uppercase tracking-widest"></div>
     </div>
   );
 };

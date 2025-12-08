@@ -35,7 +35,7 @@ export default function Home() {
         <header className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="h-px w-8 bg-primary opacity-50"></div>
-            <span className="text-primary font-pixel text-xs tracking-widest uppercase">
+            <span className="text-primary font-pixel text-sm tracking-widest uppercase">
               {activeTab === "create" && "Confidential Token Wizard"}
               {activeTab === "manage" && "Token Manager"}
               {activeTab === "interact" && "Token Interaction"}

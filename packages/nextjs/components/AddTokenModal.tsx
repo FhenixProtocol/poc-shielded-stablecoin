@@ -225,7 +225,7 @@ export const AddTokenModal = ({ isOpen, onClose }: AddTokenModalProps) => {
         <div className="p-6 space-y-5">
           {/* Network Selector */}
           <div className="space-y-2">
-            <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
+            <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
               Network
             </label>
             <div className="relative">
@@ -239,7 +239,7 @@ export const AddTokenModal = ({ isOpen, onClose }: AddTokenModalProps) => {
                     {selectedChain.name}
                   </span>
                 ) : (
-                  <span className="text-base-content/40 font-pixel text-sm">
+                  <span className="text-base-content/40 font-pixel text-base">
                     {"// Select network"}
                   </span>
                 )}
@@ -293,7 +293,7 @@ export const AddTokenModal = ({ isOpen, onClose }: AddTokenModalProps) => {
 
           {/* Token Address Input */}
           <div className="space-y-2">
-            <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
+            <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
               Token Address
             </label>
             <input
@@ -314,7 +314,7 @@ export const AddTokenModal = ({ isOpen, onClose }: AddTokenModalProps) => {
             <div className="p-4 bg-base-200 border border-base-300 rounded-sm space-y-3">
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4 text-primary" />
-                <span className="text-xs font-pixel text-primary uppercase">
+                <span className="text-sm font-pixel text-primary uppercase">
                   Token Details
                 </span>
               </div>
@@ -409,7 +409,7 @@ export const AddTokenModal = ({ isOpen, onClose }: AddTokenModalProps) => {
           </button>
 
           {!address && (
-            <p className="text-center text-xs font-pixel text-base-content/40 uppercase tracking-widest mt-3">
+            <p className="text-center text-sm font-pixel text-base-content/40 uppercase tracking-widest mt-3">
               {"// Connect wallet to add tokens"}
             </p>
           )}

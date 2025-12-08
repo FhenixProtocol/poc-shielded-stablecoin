@@ -77,7 +77,7 @@ export const DeployButton = ({
       </div>
 
       {!isConnected && (
-        <p className="text-center text-[10px] font-pixel text-base-content/40 mt-3 uppercase tracking-widest">
+        <p className="text-center text-sm font-pixel text-base-content/40 mt-3 uppercase tracking-widest">
           {"// Connect wallet in navbar to deploy"}
         </p>
       )}

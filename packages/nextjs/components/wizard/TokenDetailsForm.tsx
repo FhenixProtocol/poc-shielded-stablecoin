@@ -19,14 +19,6 @@ export const TokenDetailsForm = ({
 }: TokenDetailsFormProps) => {
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-2">
-        <span className="h-px flex-1 bg-base-300"></span>
-        <h3 className="text-[10px] font-pixel text-base-content/60 uppercase tracking-widest">
-          Token Params
-        </h3>
-        <span className="h-px flex-1 bg-base-300"></span>
-      </div>
-
       <div className="form-control w-full group/input">
         <label className="label">
           <span className="label-text font-medium text-base-content/60 group-focus-within/input:text-primary transition-colors font-display uppercase text-xs tracking-wide">

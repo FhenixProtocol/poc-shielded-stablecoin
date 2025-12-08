@@ -226,7 +226,7 @@ export const MintModal = ({
 
           {/* Mode Toggle */}
           <div className="space-y-2">
-            <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
+            <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
               Mint Type
             </label>
             <div className="flex gap-2">
@@ -268,7 +268,7 @@ export const MintModal = ({
 
           {/* Recipient Display */}
           <div className="space-y-2">
-            <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
+            <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
               Recipient
             </label>
             <div className="p-3 bg-base-200 border border-base-300 rounded-sm">
@@ -283,7 +283,7 @@ export const MintModal = ({
 
           {/* Amount Input */}
           <div className="space-y-2">
-            <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
+            <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
               Amount
             </label>
             <div className="relative">
@@ -377,7 +377,7 @@ export const MintModal = ({
           )}
 
           {!address && (
-            <p className="text-center text-xs font-pixel text-base-content/40 uppercase tracking-widest mt-3">
+            <p className="text-center text-sm font-pixel text-base-content/40 uppercase tracking-widest mt-3">
               {"// Connect wallet to mint tokens"}
             </p>
           )}

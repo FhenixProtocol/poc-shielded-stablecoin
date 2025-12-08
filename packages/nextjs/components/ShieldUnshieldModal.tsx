@@ -533,7 +533,7 @@ export const ShieldUnshieldModal = ({
 
           {/* Mode Toggle */}
           <div className="space-y-2">
-            <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
+            <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
               Action
             </label>
             <div className="flex gap-2">
@@ -588,7 +588,7 @@ export const ShieldUnshieldModal = ({
               ) : (
                 <ArrowUpFromLine className="w-4 h-4 text-primary" />
               )}
-              <span className="text-xs font-pixel text-primary uppercase">
+              <span className="text-sm font-pixel text-primary uppercase">
                 {mode === "shield" ? "Shield Tokens" : "Unshield Tokens"}
               </span>
             </div>
@@ -602,7 +602,7 @@ export const ShieldUnshieldModal = ({
           {/* Unshield Progress Steps */}
           {mode === "unshield" && (
             <div className="space-y-3">
-              <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
+              <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
                 Unshield Progress
               </label>
               <div className="relative flex items-center justify-between px-2">
@@ -758,7 +758,7 @@ export const ShieldUnshieldModal = ({
           ) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-pixel text-base-content/60 uppercase tracking-widest">
+                <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
                   Amount
                 </label>
                 {mode === "shield" && (
@@ -788,7 +788,7 @@ export const ShieldUnshieldModal = ({
                 <div className="p-4 bg-base-200 border border-base-300 rounded-sm space-y-3">
                   <div className="flex items-center gap-2">
                     <Eye className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-pixel text-primary uppercase">
+                    <span className="text-sm font-pixel text-primary uppercase">
                       Reveal Balance First
                     </span>
                   </div>
@@ -828,7 +828,7 @@ export const ShieldUnshieldModal = ({
               {mode === "unshield" && revealedShieldedBalance !== null && formattedShieldedBalance && unshieldStep === "request" && (
                 <div className="p-3 bg-primary/10 border border-primary/30 rounded-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-pixel text-primary uppercase">
+                    <span className="text-sm font-pixel text-primary uppercase">
                       Your Shielded Balance
                     </span>
                     <span className="text-sm font-mono font-bold text-primary">
@@ -966,7 +966,7 @@ export const ShieldUnshieldModal = ({
           )}
 
           {!address && (
-            <p className="text-center text-xs font-pixel text-base-content/40 uppercase tracking-widest mt-3">
+            <p className="text-center text-sm font-pixel text-base-content/40 uppercase tracking-widest mt-3">
               {"// Connect wallet to continue"}
             </p>
           )}
