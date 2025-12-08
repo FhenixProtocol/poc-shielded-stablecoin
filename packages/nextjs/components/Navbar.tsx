@@ -65,10 +65,10 @@ export const Navbar = () => {
 
           {/* Center - Tabs */}
           <div className="hidden md:flex items-center gap-1 bg-base-200 p-1 rounded-sm border border-base-300">
-            {["create", "manage", "interact"].map((tab, index) => (
+            {(["issuer", "user"] as TabType[]).map((tab, index) => (
               <div key={tab} className="flex items-center">
                 <button
-                  onClick={() => setActiveTab(tab as TabType)}
+                  onClick={() => setActiveTab(tab)}
                   className={`px-4 py-1.5 rounded-sm text-xs font-display uppercase tracking-wider transition-all font-bold ${
                     activeTab === tab
                       ? "btn-fhenix shadow-sm"
@@ -76,11 +76,10 @@ export const Navbar = () => {
                   }`}
                 >
                   <span className="opacity-50 mr-1">{index + 1}.</span>
-                  {tab === "create" && "Wizard"}
-                  {tab === "manage" && "Tokens"}
-                  {tab === "interact" && "Interact"}
+                  {tab === "issuer" && "Issuer"}
+                  {tab === "user" && "User"}
                 </button>
-                {index < 2 && (
+                {index < 1 && (
                   <div className="px-2 font-mono text-sm font-bold text-fhenix-accent">
                     →
                   </div>

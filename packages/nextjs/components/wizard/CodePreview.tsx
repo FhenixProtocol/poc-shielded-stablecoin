@@ -78,7 +78,7 @@ export const CodePreview = () => {
             <div className="w-2.5 h-2.5 rounded-full bg-base-300"></div>
           </div>
           <div className="h-4 w-px bg-base-300 mx-1"></div>
-          <div className="flex items-center gap-2 text-primary/80 font-mono font-medium text-s tracking-wide">
+          <div className="flex items-center gap-2 text-primary font-mono font-medium text-s tracking-wide">
             <FileCode className="w-3.5 h-3.5" />
             <span>ShieldedStablecoin.sol</span>
           </div>
@@ -103,7 +103,7 @@ export const CodePreview = () => {
       </div>
 
       <div
-        className={`flex-1 overflow-auto custom-scrollbar ${isDark ? "bg-[#0B1120]/80" : "bg-white"} backdrop-blur-sm relative transition-colors duration-300`}
+        className={`flex-1 overflow-auto custom-scrollbar ${isDark ? "bg-[#0B1120]/80" : "bg-[#fafafa]"} backdrop-blur-sm relative transition-colors duration-300`}
       >
         {/* Subtle grid overlay */}
         <div
