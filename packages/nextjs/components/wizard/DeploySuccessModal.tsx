@@ -160,7 +160,7 @@ export const DeploySuccessModal = ({
           </button>
           <button
             onClick={() => {
-              setActiveTab("manage");
+              setActiveTab("user");
               onClose();
             }}
             className="flex-1 btn btn-fhenix font-bold tracking-wider rounded-sm h-12 font-display uppercase"
