@@ -765,7 +765,7 @@ export const ShieldUnshieldModal = ({
                   <button
                     onClick={() => setAmount(formattedPublicBalance)}
                     disabled={isPending}
-                    className="text-xs text-primary hover:underline"
+                    className="text-xs text-base-content hover:underline"
                   >
                     Max: {parseFloat(formattedPublicBalance).toFixed(2)}{" "}
                     {contract.symbol}
@@ -775,7 +775,7 @@ export const ShieldUnshieldModal = ({
                   <button
                     onClick={() => setAmount(formattedShieldedBalance)}
                     disabled={isPending}
-                    className="text-xs text-primary hover:underline"
+                    className="text-xs text-base-content hover:underline"
                   >
                     Max: {parseFloat(formattedShieldedBalance).toFixed(2)}{" "}
                     {contract.symbol}

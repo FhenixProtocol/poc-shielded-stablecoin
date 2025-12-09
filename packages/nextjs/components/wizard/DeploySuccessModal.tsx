@@ -142,9 +142,9 @@ export const DeploySuccessModal = ({
           </div>
 
           {/* Info Note */}
-          <div className="p-3 bg-base-200 border border-base-300 rounded-sm">
-            <p className="text-xs text-base-content/60">
-              <span className="text-primary font-semibold">Tip:</span> Your contract has been saved locally.
+          <div className="p-3 bg-primary/10 border border-primary/30 rounded-sm">
+            <p className="text-xs text-base-content">
+              <span className="font-semibold">Tip:</span> Your contract has been saved locally.
               You can view and manage your deployed contracts from the dashboard.
             </p>
           </div>

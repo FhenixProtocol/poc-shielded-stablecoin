@@ -189,7 +189,7 @@ export const DeployConfirmationModal = ({
           {/* Warning - only show when not deploying */}
           {!isDeploying && (
             <div className="p-3 bg-primary/10 border border-primary/30 rounded-sm">
-              <p className="text-xs text-primary">
+              <p className="text-xs text-base-content">
                 <span className="font-bold">Note:</span> This action will deploy
                 a smart contract to the blockchain. Make sure all details are
                 correct as this cannot be undone.

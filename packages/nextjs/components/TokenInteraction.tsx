@@ -607,7 +607,7 @@ export const TokenInteraction = () => {
                     <button
                       onClick={() => setAmount(formatPublicBalance(publicBalance as bigint | undefined))}
                       disabled={isPending}
-                      className="text-xs text-primary hover:underline"
+                      className="text-xs text-base-content hover:underline"
                     >
                       Max: {parseFloat(formatPublicBalance(publicBalance as bigint | undefined)).toFixed(2)}{" "}
                       {selectedToken.symbol}
@@ -615,7 +615,7 @@ export const TokenInteraction = () => {
                   ) : (
                     <div className="flex items-center gap-1">
                       {isRevealingBalance ? (
-                        <span className="text-xs text-primary animate-pulse flex items-center gap-1">
+                        <span className="text-xs text-base-content animate-pulse flex items-center gap-1">
                           <Loader2 className="w-3 h-3 animate-spin" />
                           Decrypting...
                         </span>
@@ -624,17 +624,17 @@ export const TokenInteraction = () => {
                           <button
                             onClick={() => setAmount(formatUnits(revealedShieldedBalance, 6))}
                             disabled={isPending}
-                            className="text-xs text-primary hover:underline"
+                            className="text-xs text-base-content hover:underline"
                           >
                             Max: {parseFloat(formatUnits(revealedShieldedBalance, 6)).toFixed(2)}{" "}
                             {selectedToken.symbol}
                           </button>
                           <button
                             onClick={handleRevealBalance}
-                            className="p-0.5 hover:bg-primary/10 rounded transition-colors"
+                            className="p-0.5 hover:bg-base-300 rounded transition-colors"
                             title="Hide balance"
                           >
-                            <EyeOff className="w-3 h-3 text-primary" />
+                            <EyeOff className="w-3 h-3 text-base-content" />
                           </button>
                         </>
                       ) : (
@@ -643,7 +643,7 @@ export const TokenInteraction = () => {
                           disabled={!hasValidPermit || !isInitialized || isRevealingBalance}
                           className={`text-xs flex items-center gap-1 ${
                             hasValidPermit && isInitialized
-                              ? "text-primary hover:underline"
+                              ? "text-base-content hover:underline"
                               : "text-base-content/40 cursor-not-allowed"
                           }`}
                           title={hasValidPermit ? "Reveal balance" : "Generate permit first"}
