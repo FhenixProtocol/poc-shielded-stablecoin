@@ -296,7 +296,15 @@ const ContractCard = ({
   const [isMintModalOpen, setIsMintModalOpen] = useState(false);
   const [isShieldModalOpen, setIsShieldModalOpen] = useState(false);
 
-  // Read public balance
+  // Collapsed view shielded balance reveal state
+  const { hasValidPermit } = usePermit();
+  const { isInitialized } = useCofheStore();
+  const [isRevealingCollapsed, setIsRevealingCollapsed] = useState(false);
+  const [revealedBalanceCollapsed, setRevealedBalanceCollapsed] = useState<bigint | null>(null);
+  const [isVisibleCollapsed, setIsVisibleCollapsed] = useState(false);
+  const [lastCtHashCollapsed, setLastCtHashCollapsed] = useState<bigint | undefined>(undefined);
+
+  // Read public balance - always fetch to show in collapsed view
   const { data: publicBalance, refetch: refetchPublicBalance } =
     useReadContract({
       address: contract.address as `0x${string}`,
@@ -304,11 +312,11 @@ const ContractCard = ({
       functionName: "balanceOf",
       args: address ? [address] : undefined,
       query: {
-        enabled: !!address && isExpanded,
+        enabled: !!address,
       },
     });
 
-  // Read confidential balance (ctHash)
+  // Read confidential balance (ctHash) - always fetch to show in collapsed view
   const { data: confidentialBalance, refetch: refetchConfidentialBalance } =
     useReadContract({
       address: contract.address as `0x${string}`,
@@ -316,7 +324,7 @@ const ContractCard = ({
       functionName: "confidentialBalanceOf",
       args: address ? [address] : undefined,
       query: {
-        enabled: !!address && isExpanded,
+        enabled: !!address,
       },
     });
 
@@ -329,6 +337,85 @@ const ContractCard = ({
   const formatPublicBalance = (balance: bigint | undefined) => {
     if (!balance) return "0.00";
     return formatUnits(balance, contract.decimals);
+  };
+
+  // Format shielded balance (uses 6 decimals for confidential)
+  const formatShieldedBalance = (value: bigint) => {
+    const formatted = formatUnits(value, 6);
+    const num = parseFloat(formatted);
+    return num.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    });
+  };
+
+  // Reset revealed balance when ctHash changes
+  useEffect(() => {
+    const ctHash = confidentialBalance as bigint | undefined;
+    if (ctHash !== lastCtHashCollapsed) {
+      setLastCtHashCollapsed(ctHash);
+      setRevealedBalanceCollapsed(null);
+      setIsVisibleCollapsed(false);
+    }
+  }, [confidentialBalance, lastCtHashCollapsed]);
+
+  // Handle reveal click in collapsed view
+  const handleRevealCollapsed = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card expansion
+
+    const ctHash = confidentialBalance as bigint | undefined;
+
+    // If no permit, open the permit modal
+    if (!hasValidPermit) {
+      onOpenPermitModal();
+      return;
+    }
+
+    if (ctHash === undefined || !isInitialized) return;
+
+    // If already revealed, just toggle visibility
+    if (revealedBalanceCollapsed !== null) {
+      setIsVisibleCollapsed(!isVisibleCollapsed);
+      return;
+    }
+
+    // If ctHash is 0, no shielded balance exists yet
+    if (ctHash === BigInt(0)) {
+      setRevealedBalanceCollapsed(BigInt(0));
+      setIsVisibleCollapsed(true);
+      return;
+    }
+
+    setIsRevealingCollapsed(true);
+    try {
+      const result = await cofhejs.unseal(ctHash, FheTypes.Uint64);
+      if (result?.success && result?.data !== undefined) {
+        setRevealedBalanceCollapsed(BigInt(result.data.toString()));
+        setIsVisibleCollapsed(true);
+      } else {
+        const errorMessage = result?.error?.message || String(result?.error) || "";
+        if (
+          errorMessage.includes("sealed data not found") ||
+          errorMessage.includes("400 Bad Request") ||
+          errorMessage.includes("Failed to fetch full ciphertext")
+        ) {
+          setRevealedBalanceCollapsed(BigInt(0));
+          setIsVisibleCollapsed(true);
+        }
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (
+        errorMessage.includes("sealed data not found") ||
+        errorMessage.includes("400 Bad Request") ||
+        errorMessage.includes("Failed to fetch full ciphertext")
+      ) {
+        setRevealedBalanceCollapsed(BigInt(0));
+        setIsVisibleCollapsed(true);
+      }
+    } finally {
+      setIsRevealingCollapsed(false);
+    }
   };
 
   return (
@@ -395,7 +482,71 @@ const ContractCard = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Compact Balances Display - visible when collapsed */}
+          <div className="flex items-center gap-8">
+            {!isExpanded && (
+              <div className="flex items-center gap-8 text-right">
+                {/* Public Balance */}
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-pixel text-base-content/50 uppercase">
+                    Public
+                  </span>
+                  <span className="text-xl font-mono font-bold text-base-content">
+                    {formatPublicBalance(publicBalance as bigint | undefined)}{" "}
+                    <span className="text-base-content/60">{contract.symbol}</span>
+                  </span>
+                </div>
+
+                {/* Shielded Balance - clickable to reveal */}
+                {contract.isShielded && (
+                  <div className="flex flex-col items-end">
+                    <span className="text-sm font-pixel text-primary/70 uppercase">
+                      Shielded
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {isRevealingCollapsed ? (
+                        <>
+                          <span className="text-xl font-mono font-bold text-primary animate-pulse">
+                            Decrypting...
+                          </span>
+                          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        </>
+                      ) : revealedBalanceCollapsed !== null && isVisibleCollapsed ? (
+                        <>
+                          <span className="text-xl font-mono font-bold text-primary">
+                            {formatShieldedBalance(revealedBalanceCollapsed)}{" "}
+                            <span className="text-primary/60">{contract.symbol}</span>
+                          </span>
+                          <button
+                            onClick={handleRevealCollapsed}
+                            className="p-1 hover:bg-primary/10 rounded transition-colors"
+                            title="Hide balance"
+                          >
+                            <EyeOff className="w-5 h-5 text-primary" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-xl font-mono font-bold text-primary">
+                            <span className="text-base-content/40">(</span>
+                            sh<span className="text-primary">*</span>elded
+                            <span className="text-base-content/40">)</span>
+                          </span>
+                          <button
+                            onClick={handleRevealCollapsed}
+                            className="p-1 hover:bg-primary/10 rounded transition-colors"
+                            title={hasValidPermit ? "Reveal balance" : "Generate permit first"}
+                          >
+                            <Eye className="w-5 h-5 text-primary" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div
               className={`transition-transform duration-200 ${
                 isExpanded ? "rotate-180" : ""
