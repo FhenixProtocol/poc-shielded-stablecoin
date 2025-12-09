@@ -12,7 +12,11 @@ import {
   AlertTriangle,
   Check,
   Coins,
+  Eye,
+  EyeOff,
+  Key,
 } from "lucide-react";
+import { PermitModal } from "./PermitModal";
 import {
   useAccount,
   useWriteContract,
@@ -20,10 +24,11 @@ import {
   useSwitchChain,
   useChainId,
   useChains,
+  useReadContract,
 } from "wagmi";
-import { parseUnits, isAddress } from "viem";
+import { parseUnits, isAddress, formatUnits } from "viem";
 import { abi } from "@/utils/contract";
-import { cofhejs, Encryptable } from "cofhejs/web";
+import { cofhejs, Encryptable, FheTypes } from "cofhejs/web";
 import { useCofheStore } from "@/services/store/cofheStore";
 import { usePermit } from "@/hooks/usePermit";
 import {
@@ -34,6 +39,7 @@ import {
   getBlockExplorerTxUrl,
   formatTxHash,
 } from "@/utils/blockExplorer";
+import { useNavigationStore } from "@/services/store/navigationStore";
 
 type TransferMode = "public" | "private";
 
@@ -45,12 +51,37 @@ export const TokenInteraction = () => {
   const { isInitialized } = useCofheStore();
   const { hasValidPermit } = usePermit();
   const { contracts } = useDeployedContractsStore();
+  const { selectedTokenAddress, setSelectedTokenAddress } = useNavigationStore();
 
   // Token selector state
   const [selectedToken, setSelectedToken] = useState<DeployedContract | null>(
     null
   );
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isPermitModalOpen, setIsPermitModalOpen] = useState(false);
+
+  // Sync with navigation store - when navigating from token card
+  useEffect(() => {
+    if (selectedTokenAddress && contracts.length > 0) {
+      const token = contracts.find((c) => c.address === selectedTokenAddress);
+      if (token) {
+        setSelectedToken(token);
+        // Clear the store after applying
+        setSelectedTokenAddress(null);
+      }
+    }
+  }, [selectedTokenAddress, contracts, setSelectedTokenAddress]);
+
+  // Auto-select first token as default when no token is selected
+  useEffect(() => {
+    if (!selectedToken && contracts.length > 0 && !selectedTokenAddress) {
+      // Select the first deployed token (oldest by deployedAt)
+      const sortedContracts = [...contracts].sort(
+        (a, b) => a.deployedAt - b.deployedAt
+      );
+      setSelectedToken(sortedContracts[0]);
+    }
+  }, [selectedToken, contracts, selectedTokenAddress]);
 
   // Transfer state
   const [transferMode, setTransferMode] = useState<TransferMode>("public");
@@ -58,6 +89,114 @@ export const TokenInteraction = () => {
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isEncrypting, setIsEncrypting] = useState(false);
+
+  // Balance state for shielded balance reveal
+  const [isRevealingBalance, setIsRevealingBalance] = useState(false);
+  const [revealedShieldedBalance, setRevealedShieldedBalance] = useState<bigint | null>(null);
+  const [isBalanceVisible, setIsBalanceVisible] = useState(false);
+  const [lastCtHash, setLastCtHash] = useState<bigint | undefined>(undefined);
+
+  // Read public balance
+  const { data: publicBalance } = useReadContract({
+    address: selectedToken?.address as `0x${string}`,
+    abi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && !!selectedToken,
+    },
+  });
+
+  // Read confidential balance (ctHash)
+  const { data: confidentialBalance } = useReadContract({
+    address: selectedToken?.address as `0x${string}`,
+    abi,
+    functionName: "confidentialBalanceOf",
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && !!selectedToken && !!selectedToken.isShielded,
+    },
+  });
+
+  // Reset revealed balance when token or ctHash changes
+  useEffect(() => {
+    const ctHash = confidentialBalance as bigint | undefined;
+    if (ctHash !== lastCtHash) {
+      setLastCtHash(ctHash);
+      setRevealedShieldedBalance(null);
+      setIsBalanceVisible(false);
+    }
+  }, [confidentialBalance, lastCtHash]);
+
+  // Reset revealed balance when token changes
+  useEffect(() => {
+    setRevealedShieldedBalance(null);
+    setIsBalanceVisible(false);
+  }, [selectedToken?.address]);
+
+  const formatPublicBalance = (balance: bigint | undefined) => {
+    if (!balance || !selectedToken) return "0.00";
+    return formatUnits(balance, selectedToken.decimals);
+  };
+
+  const formatShieldedBalance = (value: bigint) => {
+    const formatted = formatUnits(value, 6);
+    const num = parseFloat(formatted);
+    return num.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    });
+  };
+
+  const handleRevealBalance = async () => {
+    const ctHash = confidentialBalance as bigint | undefined;
+
+    if (!hasValidPermit || ctHash === undefined || !isInitialized) return;
+
+    // If already revealed, just toggle visibility
+    if (revealedShieldedBalance !== null) {
+      setIsBalanceVisible(!isBalanceVisible);
+      return;
+    }
+
+    // If ctHash is 0, no shielded balance exists yet
+    if (ctHash === BigInt(0)) {
+      setRevealedShieldedBalance(BigInt(0));
+      setIsBalanceVisible(true);
+      return;
+    }
+
+    setIsRevealingBalance(true);
+    try {
+      const result = await cofhejs.unseal(ctHash, FheTypes.Uint64);
+      if (result?.success && result?.data !== undefined) {
+        setRevealedShieldedBalance(BigInt(result.data.toString()));
+        setIsBalanceVisible(true);
+      } else {
+        const errorMessage = result?.error?.message || String(result?.error) || "";
+        if (
+          errorMessage.includes("sealed data not found") ||
+          errorMessage.includes("400 Bad Request") ||
+          errorMessage.includes("Failed to fetch full ciphertext")
+        ) {
+          setRevealedShieldedBalance(BigInt(0));
+          setIsBalanceVisible(true);
+        }
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (
+        errorMessage.includes("sealed data not found") ||
+        errorMessage.includes("400 Bad Request") ||
+        errorMessage.includes("Failed to fetch full ciphertext")
+      ) {
+        setRevealedShieldedBalance(BigInt(0));
+        setIsBalanceVisible(true);
+      }
+    } finally {
+      setIsRevealingBalance(false);
+    }
+  };
 
   const {
     data: hash,
@@ -336,20 +475,20 @@ export const TokenInteraction = () => {
             <div className="space-y-4">
               {/* Wrong Chain Warning */}
               {!isCorrectChain && (
-                <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-sm">
+                <div className="p-3 bg-orange-500/10 border border-orange-500/30 rounded-sm">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <p className="text-xs text-yellow-500 font-medium">
+                      <p className="text-xs text-orange-600 font-medium">
                         Wrong Network
                       </p>
-                      <p className="text-xs text-yellow-500/80 mt-1">
+                      <p className="text-xs text-orange-600/80 mt-1">
                         Switch to {contractChainName}
                       </p>
                       <button
                         onClick={handleSwitchChain}
                         disabled={isSwitching}
-                        className="btn btn-xs btn-warning mt-2"
+                        className="btn btn-xs bg-orange-600 hover:bg-orange-700 text-white border-orange-600 mt-2"
                       >
                         {isSwitching ? (
                           <>
@@ -413,14 +552,14 @@ export const TokenInteraction = () => {
 
               {/* Private Transfer Requirements */}
               {transferMode === "private" && (
-                <div className="p-2 bg-base-200 border border-base-300 rounded-sm space-y-1">
+                <div className="p-2 bg-base-200 border border-base-300 rounded-sm space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-base-content/60">
                       COFHE Initialized
                     </span>
                     <span
                       className={
-                        isInitialized ? "text-green-500" : "text-yellow-500"
+                        isInitialized ? "text-green-500" : "text-orange-600"
                       }
                     >
                       {isInitialized ? "Ready" : "Not Ready"}
@@ -428,13 +567,17 @@ export const TokenInteraction = () => {
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-base-content/60">Permit Active</span>
-                    <span
-                      className={
-                        hasValidPermit ? "text-green-500" : "text-yellow-500"
-                      }
-                    >
-                      {hasValidPermit ? "Active" : "Required"}
-                    </span>
+                    {hasValidPermit ? (
+                      <span className="text-green-500">Active</span>
+                    ) : (
+                      <button
+                        onClick={() => setIsPermitModalOpen(true)}
+                        className="flex items-center gap-1 text-orange-600 hover:text-orange-500 transition-colors"
+                      >
+                        <Key className="w-3 h-3" />
+                        <span>Generate Permit</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -456,9 +599,62 @@ export const TokenInteraction = () => {
 
               {/* Amount Input */}
               <div className="space-y-2">
-                <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
-                  Amount
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
+                    Amount
+                  </label>
+                  {transferMode === "public" ? (
+                    <button
+                      onClick={() => setAmount(formatPublicBalance(publicBalance as bigint | undefined))}
+                      disabled={isPending}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Max: {parseFloat(formatPublicBalance(publicBalance as bigint | undefined)).toFixed(2)}{" "}
+                      {selectedToken.symbol}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      {isRevealingBalance ? (
+                        <span className="text-xs text-primary animate-pulse flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Decrypting...
+                        </span>
+                      ) : revealedShieldedBalance !== null && isBalanceVisible ? (
+                        <>
+                          <button
+                            onClick={() => setAmount(formatUnits(revealedShieldedBalance, 6))}
+                            disabled={isPending}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Max: {parseFloat(formatUnits(revealedShieldedBalance, 6)).toFixed(2)}{" "}
+                            {selectedToken.symbol}
+                          </button>
+                          <button
+                            onClick={handleRevealBalance}
+                            className="p-0.5 hover:bg-primary/10 rounded transition-colors"
+                            title="Hide balance"
+                          >
+                            <EyeOff className="w-3 h-3 text-primary" />
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={handleRevealBalance}
+                          disabled={!hasValidPermit || !isInitialized || isRevealingBalance}
+                          className={`text-xs flex items-center gap-1 ${
+                            hasValidPermit && isInitialized
+                              ? "text-primary hover:underline"
+                              : "text-base-content/40 cursor-not-allowed"
+                          }`}
+                          title={hasValidPermit ? "Reveal balance" : "Generate permit first"}
+                        >
+                          <Eye className="w-3 h-3" />
+                          Reveal Balance
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className="relative">
                   <input
                     type="number"
@@ -574,6 +770,12 @@ export const TokenInteraction = () => {
           </div>
         </div>
       </div>
+
+      {/* Permit Modal */}
+      <PermitModal
+        isOpen={isPermitModalOpen}
+        onClose={() => setIsPermitModalOpen(false)}
+      />
     </div>
   );
 };

@@ -16,7 +16,9 @@ import {
   Key,
   Eye,
   EyeOff,
+  Send,
 } from "lucide-react";
+import { useNavigationStore } from "@/services/store/navigationStore";
 import { useState, useEffect, useRef } from "react";
 import { PermitModal } from "./PermitModal";
 import { MintModal } from "./MintModal";
@@ -295,6 +297,7 @@ const ContractCard = ({
   const { address } = useAccount();
   const [isMintModalOpen, setIsMintModalOpen] = useState(false);
   const [isShieldModalOpen, setIsShieldModalOpen] = useState(false);
+  const { navigateToInteractWithToken } = useNavigationStore();
 
   // Collapsed view shielded balance reveal state
   const { hasValidPermit } = usePermit();
@@ -587,7 +590,7 @@ const ContractCard = ({
           </div>
 
           {/* Actions */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -610,6 +613,16 @@ const ContractCard = ({
             >
               <ArrowLeftRight className="w-5 h-5 mr-2" />
               Shield / Unshield
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateToInteractWithToken(contract.address);
+              }}
+              className="btn btn-fhenix h-12 font-display uppercase tracking-wide text-sm"
+            >
+              <Send className="w-5 h-5 mr-2" />
+              Use This Token
             </button>
           </div>
 
