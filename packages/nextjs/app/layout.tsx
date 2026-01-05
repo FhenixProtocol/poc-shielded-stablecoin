@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { Toaster } from "react-hot-toast";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Shielded Stablecoin",
@@ -50,6 +51,7 @@ export default function RootLayout({
             }}
           />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );

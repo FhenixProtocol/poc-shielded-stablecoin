@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useConfig } from "wagmi";
 import { deployContract, waitForTransactionReceipt } from "@wagmi/core";
-import { config } from "@/services/web3/wagmiConfig";
 import { abi, bytecode } from "@/utils/contract";
 import { useDeployedContractsStore } from "@/services/store/deployedContractsStore";
 import toast from "react-hot-toast";
@@ -47,6 +46,7 @@ const getErrorMessage = (error: unknown): string => {
 
 export const useContractDeployment = () => {
   const { address, chain } = useAccount();
+  const config = useConfig();
   const { addContract } = useDeployedContractsStore();
 
   const [isDeploying, setIsDeploying] = useState(false);
@@ -98,7 +98,7 @@ export const useContractDeployment = () => {
 
         console.log("Contract address:", receipt.contractAddress);
         setIsSuccess(true);
-        
+
         // Call success callback if provided
         params.onSuccess?.();
       } else {
@@ -121,4 +121,3 @@ export const useContractDeployment = () => {
     deployContract: deployContractAsync,
   };
 };
-

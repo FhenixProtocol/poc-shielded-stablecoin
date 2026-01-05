@@ -35,10 +35,7 @@ import {
   useDeployedContractsStore,
   DeployedContract,
 } from "@/services/store/deployedContractsStore";
-import {
-  getBlockExplorerTxUrl,
-  formatTxHash,
-} from "@/utils/blockExplorer";
+import { getBlockExplorerTxUrl, formatTxHash } from "@/utils/blockExplorer";
 import { useNavigationStore } from "@/services/store/navigationStore";
 
 type TransferMode = "public" | "private";
@@ -51,7 +48,8 @@ export const TokenInteraction = () => {
   const { isInitialized } = useCofheStore();
   const { hasValidPermit } = usePermit();
   const { contracts } = useDeployedContractsStore();
-  const { selectedTokenAddress, setSelectedTokenAddress } = useNavigationStore();
+  const { selectedTokenAddress, setSelectedTokenAddress } =
+    useNavigationStore();
 
   // Token selector state
   const [selectedToken, setSelectedToken] = useState<DeployedContract | null>(
@@ -92,7 +90,9 @@ export const TokenInteraction = () => {
 
   // Balance state for shielded balance reveal
   const [isRevealingBalance, setIsRevealingBalance] = useState(false);
-  const [revealedShieldedBalance, setRevealedShieldedBalance] = useState<bigint | null>(null);
+  const [revealedShieldedBalance, setRevealedShieldedBalance] = useState<
+    bigint | null
+  >(null);
   const [isBalanceVisible, setIsBalanceVisible] = useState(false);
   const [lastCtHash, setLastCtHash] = useState<bigint | undefined>(undefined);
 
@@ -173,7 +173,8 @@ export const TokenInteraction = () => {
         setRevealedShieldedBalance(BigInt(result.data.toString()));
         setIsBalanceVisible(true);
       } else {
-        const errorMessage = result?.error?.message || String(result?.error) || "";
+        const errorMessage =
+          result?.error?.message || String(result?.error) || "";
         if (
           errorMessage.includes("sealed data not found") ||
           errorMessage.includes("400 Bad Request") ||
@@ -283,7 +284,9 @@ export const TokenInteraction = () => {
         }
 
         if (!hasValidPermit) {
-          setError("Please generate a permit first to make confidential transfers");
+          setError(
+            "Please generate a permit first to make confidential transfers"
+          );
           return;
         }
 
@@ -297,6 +300,8 @@ export const TokenInteraction = () => {
           // Encrypt the amount using cofhejs
           const encryptedResult = await cofhejs.encrypt([
             Encryptable.uint64(parsedAmount),
+            Encryptable.uint64(parsedAmount),
+            Encryptable.bool(true),
           ] as const);
 
           const encryptedAmount = encryptedResult.data?.[0];
@@ -605,11 +610,20 @@ export const TokenInteraction = () => {
                   </label>
                   {transferMode === "public" ? (
                     <button
-                      onClick={() => setAmount(formatPublicBalance(publicBalance as bigint | undefined))}
+                      onClick={() =>
+                        setAmount(
+                          formatPublicBalance(
+                            publicBalance as bigint | undefined
+                          )
+                        )
+                      }
                       disabled={isPending}
                       className="text-xs text-base-content hover:underline"
                     >
-                      Max: {parseFloat(formatPublicBalance(publicBalance as bigint | undefined)).toFixed(2)}{" "}
+                      Max:{" "}
+                      {parseFloat(
+                        formatPublicBalance(publicBalance as bigint | undefined)
+                      ).toFixed(2)}{" "}
                       {selectedToken.symbol}
                     </button>
                   ) : (
@@ -619,14 +633,20 @@ export const TokenInteraction = () => {
                           <Loader2 className="w-3 h-3 animate-spin" />
                           Decrypting...
                         </span>
-                      ) : revealedShieldedBalance !== null && isBalanceVisible ? (
+                      ) : revealedShieldedBalance !== null &&
+                        isBalanceVisible ? (
                         <>
                           <button
-                            onClick={() => setAmount(formatUnits(revealedShieldedBalance, 6))}
+                            onClick={() =>
+                              setAmount(formatUnits(revealedShieldedBalance, 6))
+                            }
                             disabled={isPending}
                             className="text-xs text-base-content hover:underline"
                           >
-                            Max: {parseFloat(formatUnits(revealedShieldedBalance, 6)).toFixed(2)}{" "}
+                            Max:{" "}
+                            {parseFloat(
+                              formatUnits(revealedShieldedBalance, 6)
+                            ).toFixed(2)}{" "}
                             {selectedToken.symbol}
                           </button>
                           <button
@@ -640,13 +660,21 @@ export const TokenInteraction = () => {
                       ) : (
                         <button
                           onClick={handleRevealBalance}
-                          disabled={!hasValidPermit || !isInitialized || isRevealingBalance}
+                          disabled={
+                            !hasValidPermit ||
+                            !isInitialized ||
+                            isRevealingBalance
+                          }
                           className={`text-xs flex items-center gap-1 ${
                             hasValidPermit && isInitialized
                               ? "text-base-content hover:underline"
                               : "text-base-content/40 cursor-not-allowed"
                           }`}
-                          title={hasValidPermit ? "Reveal balance" : "Generate permit first"}
+                          title={
+                            hasValidPermit
+                              ? "Reveal balance"
+                              : "Generate permit first"
+                          }
                         >
                           <Eye className="w-3 h-3" />
                           Reveal Balance
@@ -698,7 +726,10 @@ export const TokenInteraction = () => {
                       </p>
                       {hash && (
                         <a
-                          href={getBlockExplorerTxUrl(selectedToken.chainId, hash)}
+                          href={getBlockExplorerTxUrl(
+                            selectedToken.chainId,
+                            hash
+                          )}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-green-500/70 font-mono mt-1 hover:text-green-500 hover:underline inline-block"
