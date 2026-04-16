@@ -5,6 +5,9 @@ interface CofheState {
   setIsInitialized: (isInitialized: boolean) => void;
   balanceUpdateTrigger: number;
   triggerBalanceUpdate: () => void;
+  // Counter to trigger UI refresh when permits change
+  permitVersion: number;
+  bumpPermitVersion: () => void;
 }
 
 export const useCofheStore = create<CofheState>((set) => ({
@@ -15,4 +18,7 @@ export const useCofheStore = create<CofheState>((set) => ({
     set((state) => ({
       balanceUpdateTrigger: state.balanceUpdateTrigger + 1,
     })),
+  permitVersion: 0,
+  bumpPermitVersion: () =>
+    set((state) => ({ permitVersion: state.permitVersion + 1 })),
 }));

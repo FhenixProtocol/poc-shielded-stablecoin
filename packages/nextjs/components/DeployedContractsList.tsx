@@ -27,7 +27,8 @@ import { AddTokenModal } from "./AddTokenModal";
 import { usePermit } from "@/hooks/usePermit";
 import { abi } from "@/utils/contract";
 import { formatUnits } from "viem";
-import { cofhejs, FheTypes } from "cofhejs/web";
+import { FheTypes } from "@cofhe/sdk";
+import { cofheClient } from "@/services/cofhe-client";
 import { useCofheStore } from "@/services/store/cofheStore";
 
 // Decryption Animation Component
@@ -87,7 +88,7 @@ const ShieldedBalanceDisplay = ({
   onOpenPermitModal,
 }: {
   contract: DeployedContract;
-  ctHash: bigint | undefined;
+  ctHash: `0x${string}` | undefined;
   onOpenPermitModal: () => void;
 }) => {
   const { hasValidPermit } = usePermit();
@@ -96,7 +97,7 @@ const ShieldedBalanceDisplay = ({
   const [revealedBalance, setRevealedBalance] = useState<bigint | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastCtHash, setLastCtHash] = useState<bigint | undefined>(undefined);
+  const [lastCtHash, setLastCtHash] = useState<`0x${string}` | undefined>(undefined);
 
   // Reset revealed balance when ctHash changes (new balance after mint/shield/unshield)
   useEffect(() => {
@@ -139,7 +140,7 @@ const ShieldedBalanceDisplay = ({
     }
 
     // If ctHash is 0, no shielded balance exists yet
-    if (ctHash === BigInt(0)) {
+    if (/^0x0+$/.test(ctHash)) {
       console.log("ctHash is 0, setting balance to 0");
       setRevealedBalance(BigInt(0));
       setIsVisible(true);
@@ -149,32 +150,11 @@ const ShieldedBalanceDisplay = ({
     setIsRevealing(true);
     setError(null);
     try {
-      console.log("Calling cofhejs.unseal with ctHash:", ctHash.toString());
-      const result = await cofhejs.unseal(ctHash, FheTypes.Uint64);
-      console.log("Unseal result:", result);
-
-      if (result?.success && result?.data !== undefined) {
-        setRevealedBalance(BigInt(result.data.toString()));
-        setIsVisible(true);
-      } else {
-        const errorMessage =
-          result?.error?.message || String(result?.error) || "";
-        console.error("Unseal failed:", errorMessage);
-
-        // Handle various error cases
-        if (
-          errorMessage.includes("sealed data not found") ||
-          errorMessage.includes("400 Bad Request") ||
-          errorMessage.includes("Failed to fetch full ciphertext")
-        ) {
-          // No shielded balance exists yet or ciphertext not available
-          setRevealedBalance(BigInt(0));
-          setIsVisible(true);
-        } else {
-          setError("Failed to decrypt");
-          console.error("Unseal failed:", result);
-        }
-      }
+      const plaintext = await cofheClient
+        .decryptForView(ctHash, FheTypes.Uint64)
+        .execute();
+      setRevealedBalance(BigInt(String(plaintext)));
+      setIsVisible(true);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("Unseal error:", err);
@@ -305,7 +285,7 @@ const ContractCard = ({
   const [isRevealingCollapsed, setIsRevealingCollapsed] = useState(false);
   const [revealedBalanceCollapsed, setRevealedBalanceCollapsed] = useState<bigint | null>(null);
   const [isVisibleCollapsed, setIsVisibleCollapsed] = useState(false);
-  const [lastCtHashCollapsed, setLastCtHashCollapsed] = useState<bigint | undefined>(undefined);
+  const [lastCtHashCollapsed, setLastCtHashCollapsed] = useState<`0x${string}` | undefined>(undefined);
 
   // Read public balance - always fetch to show in collapsed view
   const { data: publicBalance, refetch: refetchPublicBalance } =
@@ -354,7 +334,7 @@ const ContractCard = ({
 
   // Reset revealed balance when ctHash changes
   useEffect(() => {
-    const ctHash = confidentialBalance as bigint | undefined;
+    const ctHash = confidentialBalance as `0x${string}` | undefined;
     if (ctHash !== lastCtHashCollapsed) {
       setLastCtHashCollapsed(ctHash);
       setRevealedBalanceCollapsed(null);
@@ -366,7 +346,7 @@ const ContractCard = ({
   const handleRevealCollapsed = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card expansion
 
-    const ctHash = confidentialBalance as bigint | undefined;
+    const ctHash = confidentialBalance as `0x${string}` | undefined;
 
     // If no permit, open the permit modal
     if (!hasValidPermit) {
@@ -383,7 +363,7 @@ const ContractCard = ({
     }
 
     // If ctHash is 0, no shielded balance exists yet
-    if (ctHash === BigInt(0)) {
+    if (/^0x0+$/.test(ctHash)) {
       setRevealedBalanceCollapsed(BigInt(0));
       setIsVisibleCollapsed(true);
       return;
@@ -391,21 +371,11 @@ const ContractCard = ({
 
     setIsRevealingCollapsed(true);
     try {
-      const result = await cofhejs.unseal(ctHash, FheTypes.Uint64);
-      if (result?.success && result?.data !== undefined) {
-        setRevealedBalanceCollapsed(BigInt(result.data.toString()));
-        setIsVisibleCollapsed(true);
-      } else {
-        const errorMessage = result?.error?.message || String(result?.error) || "";
-        if (
-          errorMessage.includes("sealed data not found") ||
-          errorMessage.includes("400 Bad Request") ||
-          errorMessage.includes("Failed to fetch full ciphertext")
-        ) {
-          setRevealedBalanceCollapsed(BigInt(0));
-          setIsVisibleCollapsed(true);
-        }
-      }
+      const plaintext = await cofheClient
+        .decryptForView(ctHash, FheTypes.Uint64)
+        .execute();
+      setRevealedBalanceCollapsed(BigInt(String(plaintext)));
+      setIsVisibleCollapsed(true);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       if (
@@ -584,7 +554,7 @@ const ContractCard = ({
             {/* Shielded Balance */}
             <ShieldedBalanceDisplay
               contract={contract}
-              ctHash={confidentialBalance as bigint | undefined}
+              ctHash={confidentialBalance as `0x${string}` | undefined}
               onOpenPermitModal={onOpenPermitModal}
             />
           </div>

@@ -10,7 +10,6 @@ import {
   ArrowUpFromLine,
   AlertTriangle,
   CheckCircle2,
-  Clock,
   Eye,
 } from "lucide-react";
 import {
@@ -29,7 +28,8 @@ import {
   getBlockExplorerTxUrl,
   formatTxHash,
 } from "@/utils/blockExplorer";
-import { cofhejs, FheTypes } from "cofhejs/web";
+import { FheTypes } from "@cofhe/sdk";
+import { cofheClient } from "@/services/cofhe-client";
 import { usePermit } from "@/hooks/usePermit";
 import { useCofheStore } from "@/services/store/cofheStore";
 
@@ -44,10 +44,10 @@ interface ShieldUnshieldModalProps {
 type Mode = "shield" | "unshield";
 
 interface UnshieldClaim {
-  ctHash: bigint;
+  to: string;
+  ctHash: `0x${string}`;
   requestedAmount: bigint;
   decryptedAmount: bigint;
-  decrypted: boolean;
   claimed: boolean;
 }
 
@@ -68,10 +68,14 @@ export const ShieldUnshieldModal = ({
   const [mode, setMode] = useState<Mode>("shield");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [unshieldStep, setUnshieldStep] = useState<
-    "request" | "waiting" | "claim"
-  >("request");
-  const [isPolling, setIsPolling] = useState(false);
+  // unshield step: "request" → tx sent → "claim" (ready to decrypt+claim)
+  const [unshieldStep, setUnshieldStep] = useState<"request" | "claim">(
+    "request"
+  );
+  const [pendingClaimCtHash, setPendingClaimCtHash] = useState<
+    `0x${string}` | null
+  >(null);
+  const [isDecrypting, setIsDecrypting] = useState(false);
 
   // Shielded balance reveal state
   const [revealedShieldedBalance, setRevealedShieldedBalance] = useState<bigint | null>(null);
@@ -87,24 +91,7 @@ export const ShieldUnshieldModal = ({
   } = useWriteContract();
 
   const { isLoading: isConfirming, isSuccess: isTxSuccess } =
-    useWaitForTransactionReceipt({
-      hash,
-    });
-
-  // Read the unshield claim status
-  const {
-    data: unshieldClaim,
-    refetch: refetchClaim,
-    isError: isClaimError,
-  } = useReadContract({
-    address: contract.address as `0x${string}`,
-    abi,
-    functionName: "getUserUnshieldClaim",
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address && mode === "unshield" && unshieldStep !== "request",
-    },
-  });
+    useWaitForTransactionReceipt({ hash });
 
   // Read confidential balance (ctHash) for unshield mode
   const { data: confidentialBalance } = useReadContract({
@@ -112,41 +99,43 @@ export const ShieldUnshieldModal = ({
     abi,
     functionName: "confidentialBalanceOf",
     args: address ? [address] : undefined,
-    query: {
-      enabled: !!address && mode === "unshield",
-    },
+    query: { enabled: !!address && mode === "unshield" },
   });
 
-  const ctHash = confidentialBalance as bigint | undefined;
+  // Read user claims to detect pending unshield
+  const { data: userClaims, refetch: refetchClaims } = useReadContract({
+    address: contract.address as `0x${string}`,
+    abi,
+    functionName: "getUserClaims",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && mode === "unshield" },
+  });
 
-  // Check if we're on the correct chain
+  const ctHash = confidentialBalance as `0x${string}` | undefined;
+
   const isCorrectChain = currentChainId === contract.chainId;
   const contractChainName =
     chains.find((c) => c.id === contract.chainId)?.name ||
     `Chain ${contract.chainId}`;
 
-  // Format balances
   const formattedPublicBalance = publicBalance
     ? formatUnits(publicBalance, contract.decimals)
     : "0";
 
-  const formattedShieldedBalance = revealedShieldedBalance !== null
-    ? formatUnits(revealedShieldedBalance, 6) // Shielded tokens use 6 decimals
-    : null;
+  const formattedShieldedBalance =
+    revealedShieldedBalance !== null
+      ? formatUnits(revealedShieldedBalance, 6)
+      : null;
 
-  // Check if amount exceeds balance
   const getAmountExceedsBalance = () => {
     if (!amount) return false;
     try {
       if (mode === "shield") {
         if (!publicBalance) return false;
-        const parsedAmount = parseUnits(amount, contract.decimals);
-        return parsedAmount > publicBalance;
+        return parseUnits(amount, contract.decimals) > publicBalance;
       } else {
-        // Unshield mode - check against revealed shielded balance
         if (revealedShieldedBalance === null) return false;
-        const parsedAmount = parseUnits(amount, 6); // Shielded uses 6 decimals
-        return parsedAmount > revealedShieldedBalance;
+        return parseUnits(amount, 6) > revealedShieldedBalance;
       }
     } catch {
       return false;
@@ -154,14 +143,44 @@ export const ShieldUnshieldModal = ({
   };
   const amountExceedsBalance = getAmountExceedsBalance();
 
-  // Handle revealing shielded balance
-  const handleRevealBalance = async () => {
-    if (ctHash === undefined || !hasValidPermit || !isInitialized) {
-      return;
+  // Check for existing pending claims on mount / mode switch
+  useEffect(() => {
+    if (mode === "unshield" && address && isCorrectChain) {
+      refetchClaims().then((result) => {
+        const claims = result.data as UnshieldClaim[] | undefined;
+        const pending = claims?.find((c) => !c.claimed);
+        if (pending) {
+          setPendingClaimCtHash(pending.ctHash);
+          setUnshieldStep("claim");
+        }
+      }).catch(() => {});
     }
+  }, [mode, address, isCorrectChain, refetchClaims]);
 
-    // If ctHash is 0, no shielded balance exists yet
-    if (ctHash === BigInt(0)) {
+  // After unshield tx confirms, move to claim step
+  useEffect(() => {
+    if (!isTxSuccess) return;
+    if (mode === "shield") {
+      onSuccess?.();
+    } else if (mode === "unshield" && unshieldStep === "request") {
+      // Fetch the newly created claim
+      refetchClaims().then((result) => {
+        const claims = result.data as UnshieldClaim[] | undefined;
+        const pending = claims?.find((c) => !c.claimed);
+        if (pending) {
+          setPendingClaimCtHash(pending.ctHash);
+          setUnshieldStep("claim");
+          resetWrite();
+        }
+      }).catch(() => {});
+    } else if (mode === "unshield" && unshieldStep === "claim") {
+      onSuccess?.();
+    }
+  }, [isTxSuccess, mode, unshieldStep, refetchClaims, resetWrite, onSuccess]);
+
+  const handleRevealBalance = async () => {
+    if (!ctHash || !hasValidPermit || !isInitialized) return;
+    if (ctHash === "0x0000000000000000000000000000000000000000000000000000000000000000") {
       setRevealedShieldedBalance(BigInt(0));
       return;
     }
@@ -169,293 +188,131 @@ export const ShieldUnshieldModal = ({
     setIsRevealingBalance(true);
     setRevealError(null);
     try {
-      const result = await cofhejs.unseal(ctHash, FheTypes.Uint64);
-
-      if (result?.success && result?.data !== undefined) {
-        setRevealedShieldedBalance(BigInt(result.data.toString()));
-      } else {
-        const errorMessage =
-          result?.error?.message || String(result?.error) || "";
-
-        if (
-          errorMessage.includes("sealed data not found") ||
-          errorMessage.includes("400 Bad Request") ||
-          errorMessage.includes("Failed to fetch full ciphertext")
-        ) {
-          setRevealedShieldedBalance(BigInt(0));
-        } else {
-          setRevealError("Failed to decrypt balance");
-        }
-      }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-
+      const plaintext = await cofheClient
+        .decryptForView(ctHash, FheTypes.Uint64)
+        .execute();
+      setRevealedShieldedBalance(BigInt(String(plaintext)));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       if (
-        errorMessage.includes("sealed data not found") ||
-        errorMessage.includes("400 Bad Request") ||
-        errorMessage.includes("Failed to fetch full ciphertext")
+        msg.includes("not found") ||
+        msg.includes("400") ||
+        msg.includes("fetch full ciphertext")
       ) {
         setRevealedShieldedBalance(BigInt(0));
       } else {
-        setRevealError("Decryption error");
+        setRevealError("Failed to decrypt balance");
       }
     } finally {
       setIsRevealingBalance(false);
     }
   };
 
-  // Parse the unshield claim data
-  const claimData = unshieldClaim as UnshieldClaim | undefined;
-  const isClaimReady = claimData?.decrypted && !claimData?.claimed;
-  console.log({ claimData });
-
-  // Poll for claim status when waiting
-  useEffect(() => {
-    if (mode !== "unshield" || unshieldStep !== "waiting" || !address) {
-      return;
-    }
-
-    setIsPolling(true);
-    const interval = setInterval(async () => {
-      try {
-        const result = await refetchClaim();
-        const claim = result.data as UnshieldClaim | undefined;
-
-        if (claim && claim.decrypted && !claim.claimed) {
-          setUnshieldStep("claim");
-          setIsPolling(false);
-          clearInterval(interval);
-        }
-      } catch {
-        // Claim might not exist yet, continue polling
-      }
-    }, 1000);
-
-    return () => {
-      clearInterval(interval);
-      setIsPolling(false);
-    };
-  }, [mode, unshieldStep, address, refetchClaim]);
-
-  // Track which step the tx was for
   const [claimCompleted, setClaimCompleted] = useState(false);
 
-  // Handle transaction success
-  useEffect(() => {
-    if (isTxSuccess) {
-      if (mode === "shield") {
-        // Shield completed
-        onSuccess?.();
-      } else if (mode === "unshield") {
-        if (unshieldStep === "request") {
-          // Unshield request sent, start waiting for decryption
-          setUnshieldStep("waiting");
-          resetWrite();
-        } else if (unshieldStep === "claim") {
-          // Claim completed - mark as done and call success callback
-          setClaimCompleted(true);
-          onSuccess?.();
-        }
-      }
-    }
-  }, [isTxSuccess, mode, unshieldStep, onSuccess, resetWrite]);
-
-  // Check for existing claim on mount/mode change
-  useEffect(() => {
-    if (mode === "unshield" && address && isCorrectChain) {
-      refetchClaim()
-        .then((result) => {
-          const claim = result.data as UnshieldClaim | undefined;
-          if (claim && !isClaimError) {
-            if (claim.decrypted && !claim.claimed) {
-              setUnshieldStep("claim");
-            } else if (
-              !claim.decrypted &&
-              !claim.claimed &&
-              claim.ctHash !== BigInt(0)
-            ) {
-              setUnshieldStep("waiting");
-            }
-          }
-        })
-        .catch(() => {
-          // No existing claim
-          setUnshieldStep("request");
-        });
-    }
-  }, [mode, address, isCorrectChain, refetchClaim, isClaimError]);
-
-  if (!isOpen) return null;
-
-  const isPending = isWritePending || isConfirming || isSwitching;
-
   const handleClose = () => {
-    if (isPending || isPolling) return;
+    if (isWritePending || isConfirming || isSwitching || isDecrypting) return;
     setAmount("");
     setError(null);
     setMode("shield");
     setUnshieldStep("request");
     setClaimCompleted(false);
+    setPendingClaimCtHash(null);
     setRevealedShieldedBalance(null);
     setRevealError(null);
     resetWrite();
     onClose();
   };
 
-  const handleSwitchChain = () => {
-    switchChain({ chainId: contract.chainId });
-  };
-
-  const handleShield = async () => {
-    if (!address) {
-      setError("Please connect your wallet");
-      return;
-    }
-
-    if (!isCorrectChain) {
-      setError("Please switch to the correct network");
-      return;
-    }
-
-    if (!amount || parseFloat(amount) <= 0) {
-      setError("Please enter a valid amount");
-      return;
-    }
-
+  const handleShield = () => {
+    if (!address || !isCorrectChain || !amount || parseFloat(amount) <= 0) return;
     const parsedAmount = parseUnits(amount, contract.decimals);
-
     if (publicBalance && parsedAmount > publicBalance) {
       setError("Amount exceeds your public balance");
       return;
     }
-
     setError(null);
-
-    try {
-      writeContract({
-        address: contract.address as `0x${string}`,
-        abi,
-        functionName: "shield",
-        args: [parsedAmount],
-      });
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Transaction failed";
-      setError(errorMessage);
-    }
+    writeContract({
+      address: contract.address as `0x${string}`,
+      abi,
+      functionName: "shield",
+      args: [parsedAmount],
+    });
   };
 
-  const handleUnshield = async () => {
-    if (!address) {
-      setError("Please connect your wallet");
-      return;
-    }
-
-    if (!isCorrectChain) {
-      setError("Please switch to the correct network");
-      return;
-    }
-
-    if (!amount || parseFloat(amount) <= 0) {
-      setError("Please enter a valid amount");
-      return;
-    }
-
+  const handleUnshield = () => {
+    if (!address || !isCorrectChain || !amount || parseFloat(amount) <= 0) return;
     setError(null);
-
-    try {
-      // Unshield uses 6 decimals (confidential precision)
-      const confidentialDecimals = 6;
-      const parsedAmount = parseUnits(amount, confidentialDecimals);
-
-      writeContract({
-        address: contract.address as `0x${string}`,
-        abi,
-        functionName: "unshield",
-        args: [parsedAmount],
-      });
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Transaction failed";
-      setError(errorMessage);
-    }
+    const parsedAmount = parseUnits(amount, 6);
+    writeContract({
+      address: contract.address as `0x${string}`,
+      abi,
+      functionName: "unshield",
+      args: [parsedAmount],
+    });
   };
 
   const handleClaimUnshielded = async () => {
-    if (!address) {
-      setError("Please connect your wallet");
-      return;
-    }
-
-    if (!isCorrectChain) {
-      setError("Please switch to the correct network");
-      return;
-    }
-
+    if (!address || !isCorrectChain || !pendingClaimCtHash) return;
     setError(null);
+    setIsDecrypting(true);
 
     try {
+      // Decrypt off-chain via Threshold Network — no permit needed
+      const { decryptedValue, signature } = await cofheClient
+        .decryptForTx(pendingClaimCtHash)
+        .withoutPermit()
+        .execute();
+
+      setIsDecrypting(false);
+
+      // Submit claim with cryptographic proof
       writeContract({
         address: contract.address as `0x${string}`,
         abi,
         functionName: "claimUnshielded",
-        args: [],
+        args: [pendingClaimCtHash, decryptedValue, signature],
       });
+      setClaimCompleted(true);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Transaction failed";
-      setError(errorMessage);
+      setIsDecrypting(false);
+      const msg = err instanceof Error ? err.message : "Decryption failed";
+      setError(msg);
     }
   };
 
   const handleSubmit = () => {
     if (mode === "shield") {
       handleShield();
+    } else if (unshieldStep === "request") {
+      handleUnshield();
     } else {
-      if (unshieldStep === "request") {
-        handleUnshield();
-      } else if (unshieldStep === "claim") {
-        handleClaimUnshielded();
-      }
+      handleClaimUnshielded();
     }
   };
 
+  const isPending = isWritePending || isConfirming || isSwitching || isDecrypting;
+
   const getButtonText = () => {
     if (isSwitching) return "Switching Network...";
+    if (isDecrypting) return "Decrypting...";
     if (isWritePending) return "Confirm in Wallet...";
     if (isConfirming) return "Confirming...";
-
-    if (mode === "shield") {
-      if (isTxSuccess) return "Shielded!";
-      return "Shield Tokens";
-    } else {
-      if (claimCompleted) return "Claimed!";
-      if (unshieldStep === "request") {
-        return "Request Unshield";
-      } else if (unshieldStep === "waiting") {
-        return "Waiting for Decryption...";
-      } else {
-        return "Claim Tokens";
-      }
-    }
+    if (mode === "shield") return isTxSuccess ? "Shielded!" : "Shield Tokens";
+    if (unshieldStep === "request") return "Request Unshield";
+    return claimCompleted ? "Claimed!" : "Claim Tokens";
   };
 
   const isButtonDisabled = () => {
     if (isPending || !isCorrectChain) return true;
-    if (mode === "shield") {
-      return !amount || isTxSuccess || amountExceedsBalance;
-    } else {
-      if (claimCompleted) return true;
-      if (unshieldStep === "request") {
-        // For unshield, require revealed balance and valid amount
-        return !amount || revealedShieldedBalance === null || amountExceedsBalance;
-      } else if (unshieldStep === "waiting") {
-        return true;
-      } else {
-        return !isClaimReady;
-      }
+    if (mode === "shield") return !amount || isTxSuccess || amountExceedsBalance;
+    if (unshieldStep === "request") {
+      return !amount || revealedShieldedBalance === null || amountExceedsBalance;
     }
+    return claimCompleted || !pendingClaimCtHash;
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -490,7 +347,7 @@ export const ShieldUnshieldModal = ({
           </div>
           <button
             onClick={handleClose}
-            disabled={isPending || isPolling}
+            disabled={isPending}
             className="btn btn-ghost btn-sm btn-square"
           >
             <X className="w-5 h-5" />
@@ -505,23 +362,17 @@ export const ShieldUnshieldModal = ({
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm text-yellow-500 font-medium">
-                    Wrong Network
-                  </p>
+                  <p className="text-sm text-yellow-500 font-medium">Wrong Network</p>
                   <p className="text-xs text-yellow-500/80 mt-1">
-                    This token is on {contractChainName}. Please switch
-                    networks.
+                    This token is on {contractChainName}. Please switch networks.
                   </p>
                   <button
-                    onClick={handleSwitchChain}
+                    onClick={() => switchChain({ chainId: contract.chainId })}
                     disabled={isSwitching}
                     className="btn btn-sm btn-warning mt-3"
                   >
                     {isSwitching ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Switching...
-                      </>
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" />Switching...</>
                     ) : (
                       `Switch to ${contractChainName}`
                     )}
@@ -538,14 +389,8 @@ export const ShieldUnshieldModal = ({
             </label>
             <div className="flex gap-2">
               <button
-                onClick={() => {
-                  setMode("shield");
-                  setAmount("");
-                  setError(null);
-                  setClaimCompleted(false);
-                  resetWrite();
-                }}
-                disabled={isPending || isPolling}
+                onClick={() => { setMode("shield"); setAmount(""); setError(null); setClaimCompleted(false); resetWrite(); }}
+                disabled={isPending}
                 className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-sm border transition-all ${
                   mode === "shield"
                     ? "border-primary bg-primary/10 text-primary"
@@ -553,19 +398,11 @@ export const ShieldUnshieldModal = ({
                 }`}
               >
                 <ArrowDownToLine className="w-4 h-4" />
-                <span className="text-sm font-display uppercase tracking-wide">
-                  Shield
-                </span>
+                <span className="text-sm font-display uppercase tracking-wide">Shield</span>
               </button>
               <button
-                onClick={() => {
-                  setMode("unshield");
-                  setAmount("");
-                  setError(null);
-                  setClaimCompleted(false);
-                  resetWrite();
-                }}
-                disabled={isPending || isPolling}
+                onClick={() => { setMode("unshield"); setAmount(""); setError(null); setClaimCompleted(false); resetWrite(); }}
+                disabled={isPending}
                 className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-sm border transition-all ${
                   mode === "unshield"
                     ? "border-primary bg-primary/10 text-primary"
@@ -573,9 +410,7 @@ export const ShieldUnshieldModal = ({
                 }`}
               >
                 <ArrowUpFromLine className="w-4 h-4" />
-                <span className="text-sm font-display uppercase tracking-wide">
-                  Unshield
-                </span>
+                <span className="text-sm font-display uppercase tracking-wide">Unshield</span>
               </button>
             </div>
           </div>
@@ -595,48 +430,32 @@ export const ShieldUnshieldModal = ({
             <p className="text-xs text-base-content/60">
               {mode === "shield"
                 ? "Convert public tokens to shielded (private) tokens. Your balance will be encrypted and hidden."
-                : "Convert shielded tokens back to public tokens. This is a two-step process: first request unshield, then claim after decryption."}
+                : "Convert shielded tokens back to public tokens. Request unshield, then decrypt and claim in one step."}
             </p>
           </div>
 
-          {/* Unshield Progress Steps */}
+          {/* Unshield Steps */}
           {mode === "unshield" && (
             <div className="space-y-3">
               <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
                 Unshield Progress
               </label>
               <div className="relative flex items-center justify-between px-2">
-                {/* Connector Lines */}
-                <div className="absolute top-4 left-[calc(16.67%+8px)] right-[calc(16.67%+8px)] h-0.5 bg-base-300">
-                  {/* First segment - Request to Decrypt */}
+                <div className="absolute top-4 left-[calc(25%+8px)] right-[calc(25%+8px)] h-0.5 bg-base-300">
                   <div
                     className={`absolute left-0 h-full transition-all duration-300 ${
-                      unshieldStep !== "request" || claimCompleted
-                        ? "w-1/2 bg-green-500"
-                        : "w-0"
-                    }`}
-                  />
-                  {/* Second segment - Decrypt to Claim */}
-                  <div
-                    className={`absolute left-1/2 h-full transition-all duration-300 ${
-                      unshieldStep === "claim" || claimCompleted
-                        ? "w-1/2 bg-green-500"
-                        : unshieldStep === "waiting"
-                          ? "w-1/4 bg-yellow-500"
-                          : "w-0"
+                      unshieldStep === "claim" || claimCompleted ? "w-full bg-green-500" : "w-0"
                     }`}
                   />
                 </div>
 
                 {/* Step 1 - Request */}
                 <div className="flex flex-col items-center gap-2 z-10">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                      unshieldStep === "request" && !claimCompleted
-                        ? "bg-primary text-primary-content ring-4 ring-primary/20"
-                        : "bg-green-500 text-white"
-                    }`}
-                  >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    unshieldStep === "request" && !claimCompleted
+                      ? "bg-primary text-primary-content ring-4 ring-primary/20"
+                      : "bg-green-500 text-white"
+                  }`}>
                     {unshieldStep === "request" && !claimCompleted ? (
                       <span className="text-xs font-bold">1</span>
                     ) : (
@@ -644,84 +463,35 @@ export const ShieldUnshieldModal = ({
                     )}
                   </div>
                   <span className={`text-xs font-medium ${
-                    unshieldStep === "request" && !claimCompleted
-                      ? "text-primary"
-                      : "text-green-600"
+                    unshieldStep === "request" && !claimCompleted ? "text-primary" : "text-green-600"
                   }`}>Request</span>
                 </div>
 
-                {/* Step 2 - Decrypt */}
+                {/* Step 2 - Claim */}
                 <div className="flex flex-col items-center gap-2 z-10">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                      unshieldStep === "waiting"
-                        ? "bg-yellow-500 text-white ring-4 ring-yellow-500/20"
-                        : unshieldStep === "claim" || claimCompleted
-                          ? "bg-green-500 text-white"
-                          : "bg-base-300 text-base-content/40"
-                    }`}
-                  >
-                    {unshieldStep === "waiting" ? (
-                      <Clock className="w-4 h-4 animate-pulse" />
-                    ) : unshieldStep === "claim" || claimCompleted ? (
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    claimCompleted
+                      ? "bg-green-500 text-white"
+                      : unshieldStep === "claim"
+                        ? "bg-primary text-primary-content ring-4 ring-primary/20"
+                        : "bg-base-300 text-base-content/40"
+                  }`}>
+                    {claimCompleted ? (
                       <CheckCircle2 className="w-4 h-4" />
                     ) : (
                       <span className="text-xs font-bold">2</span>
                     )}
                   </div>
                   <span className={`text-xs font-medium ${
-                    unshieldStep === "waiting"
-                      ? "text-yellow-600"
-                      : unshieldStep === "claim" || claimCompleted
-                        ? "text-green-600"
-                        : "text-base-content/60"
-                  }`}>Decrypt</span>
-                </div>
-
-                {/* Step 3 - Claim */}
-                <div className="flex flex-col items-center gap-2 z-10">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                      claimCompleted
-                        ? "bg-green-500 text-white"
-                        : unshieldStep === "claim"
-                          ? "bg-primary text-primary-content ring-4 ring-primary/20"
-                          : "bg-base-300 text-base-content/40"
-                    }`}
-                  >
-                    {claimCompleted ? (
-                      <CheckCircle2 className="w-4 h-4" />
-                    ) : (
-                      <span className="text-xs font-bold">3</span>
-                    )}
-                  </div>
-                  <span className={`text-xs font-medium ${
-                    claimCompleted
-                      ? "text-green-600"
-                      : unshieldStep === "claim"
-                        ? "text-primary"
-                        : "text-base-content/60"
-                  }`}>Claim</span>
+                    claimCompleted ? "text-green-600" : unshieldStep === "claim" ? "text-primary" : "text-base-content/60"
+                  }`}>Decrypt & Claim</span>
                 </div>
               </div>
 
-              {unshieldStep === "waiting" && (
-                <div className="flex items-center gap-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-sm">
-                  <Loader2 className="w-4 h-4 text-yellow-500 animate-spin" />
-                  <span className="text-xs text-yellow-500">
-                    Waiting for decryption... This may take a few moments.
-                  </span>
-                </div>
-              )}
-
-              {unshieldStep === "claim" && claimData && !claimCompleted && (
-                <div className="p-2 bg-green-500/10 border border-green-500/30 rounded-sm">
-                  <p className="text-xs text-green-500">
-                    Decryption complete! Amount ready to claim:{" "}
-                    <span className="font-mono font-bold">
-                      {formatUnits(claimData.decryptedAmount, 6)}{" "}
-                      {contract.symbol}
-                    </span>
+              {unshieldStep === "claim" && !claimCompleted && (
+                <div className="p-2 bg-primary/10 border border-primary/30 rounded-sm">
+                  <p className="text-xs text-primary">
+                    Ready to claim. Click &quot;Claim Tokens&quot; to decrypt off-chain and submit the proof on-chain.
                   </p>
                 </div>
               )}
@@ -731,9 +501,7 @@ export const ShieldUnshieldModal = ({
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-green-500 font-medium">
-                        Tokens claimed successfully!
-                      </p>
+                      <p className="text-sm text-green-500 font-medium">Tokens claimed successfully!</p>
                       {hash && (
                         <a
                           href={getBlockExplorerTxUrl(contract.chainId, hash)}
@@ -751,11 +519,8 @@ export const ShieldUnshieldModal = ({
             </div>
           )}
 
-          {/* Amount Input (hide during waiting/claim) */}
-          {!(
-            mode === "unshield" &&
-            (unshieldStep === "waiting" || unshieldStep === "claim")
-          ) && (
+          {/* Amount Input */}
+          {!(mode === "unshield" && unshieldStep === "claim") && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-pixel text-base-content/60 uppercase tracking-widest">
@@ -767,8 +532,7 @@ export const ShieldUnshieldModal = ({
                     disabled={isPending}
                     className="text-xs text-base-content hover:underline"
                   >
-                    Max: {parseFloat(formattedPublicBalance).toFixed(2)}{" "}
-                    {contract.symbol}
+                    Max: {parseFloat(formattedPublicBalance).toFixed(2)} {contract.symbol}
                   </button>
                 )}
                 {mode === "unshield" && revealedShieldedBalance !== null && formattedShieldedBalance && (
@@ -777,27 +541,24 @@ export const ShieldUnshieldModal = ({
                     disabled={isPending}
                     className="text-xs text-base-content hover:underline"
                   >
-                    Max: {parseFloat(formattedShieldedBalance).toFixed(2)}{" "}
-                    {contract.symbol}
+                    Max: {parseFloat(formattedShieldedBalance).toFixed(2)} {contract.symbol}
                   </button>
                 )}
               </div>
 
-              {/* Reveal Balance Section for Unshield */}
+              {/* Reveal balance prompt for unshield */}
               {mode === "unshield" && revealedShieldedBalance === null && unshieldStep === "request" && (
                 <div className="p-4 bg-base-200 border border-base-300 rounded-sm space-y-3">
                   <div className="flex items-center gap-2">
                     <Eye className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-pixel text-primary uppercase">
-                      Reveal Balance First
-                    </span>
+                    <span className="text-sm font-pixel text-primary uppercase">Reveal Balance First</span>
                   </div>
                   <p className="text-xs text-base-content/60">
-                    You need to reveal your shielded balance before you can unshield tokens.
+                    Reveal your shielded balance before unshielding.
                   </p>
                   {!hasValidPermit ? (
                     <p className="text-xs text-yellow-500">
-                      A permit is required to reveal your balance. Please generate one first.
+                      A permit is required to reveal your balance.
                     </p>
                   ) : (
                     <button
@@ -806,31 +567,21 @@ export const ShieldUnshieldModal = ({
                       className="btn btn-sm btn-primary"
                     >
                       {isRevealingBalance ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          Revealing...
-                        </>
+                        <><Loader2 className="w-4 h-4 animate-spin mr-2" />Revealing...</>
                       ) : (
-                        <>
-                          <Eye className="w-4 h-4 mr-2" />
-                          Reveal Balance
-                        </>
+                        <><Eye className="w-4 h-4 mr-2" />Reveal Balance</>
                       )}
                     </button>
                   )}
-                  {revealError && (
-                    <p className="text-xs text-red-500">{revealError}</p>
-                  )}
+                  {revealError && <p className="text-xs text-red-500">{revealError}</p>}
                 </div>
               )}
 
-              {/* Revealed Balance Display for Unshield */}
+              {/* Revealed shielded balance */}
               {mode === "unshield" && revealedShieldedBalance !== null && formattedShieldedBalance && unshieldStep === "request" && (
                 <div className="p-3 bg-primary/10 border border-primary/30 rounded-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-pixel text-primary uppercase">
-                      Your Shielded Balance
-                    </span>
+                    <span className="text-sm font-pixel text-primary uppercase">Your Shielded Balance</span>
                     <span className="text-sm font-mono font-bold text-primary">
                       {parseFloat(formattedShieldedBalance).toFixed(2)} {contract.symbol}
                     </span>
@@ -838,7 +589,7 @@ export const ShieldUnshieldModal = ({
                 </div>
               )}
 
-              {/* Amount Input - Only show when balance is revealed for unshield, or always for shield */}
+              {/* Amount input field */}
               {(mode === "shield" || (mode === "unshield" && revealedShieldedBalance !== null)) && (
                 <>
                   <div className="relative">
@@ -886,36 +637,24 @@ export const ShieldUnshieldModal = ({
                 <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-red-500">
                   {(() => {
-                    const errorMsg = error || writeError?.message || "";
-                    // Decode common contract errors
-                    if (errorMsg.includes("0xe450d38c") || errorMsg.includes("ERC20InsufficientBalance")) {
-                      return "Insufficient shielded balance. The requested unshield amount exceeds your available shielded tokens.";
-                    }
-                    if (errorMsg.includes("UnshieldClaimAlreadyClaimed")) {
-                      return "This claim has already been processed.";
-                    }
-                    if (errorMsg.includes("UnshieldClaimNotFound")) {
-                      return "No unshield claim found. Please request unshield first.";
-                    }
-                    if (errorMsg.includes("UserHasActiveUnshieldClaim")) {
-                      return "You already have an active unshield claim. Please complete or wait for it before requesting another.";
-                    }
-                    return errorMsg;
+                    const msg = error || writeError?.message || "";
+                    if (msg.includes("ERC20InsufficientBalance")) return "Insufficient shielded balance.";
+                    if (msg.includes("AlreadyClaimed")) return "This claim has already been processed.";
+                    if (msg.includes("ClaimNotFound")) return "No unshield claim found. Please request unshield first.";
+                    return msg;
                   })()}
                 </p>
               </div>
             </div>
           )}
 
-          {/* Success Display */}
+          {/* Shield Success */}
           {isTxSuccess && mode === "shield" && (
             <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-sm">
               <div className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm text-green-500 font-medium">
-                    Tokens shielded successfully!
-                  </p>
+                  <p className="text-sm text-green-500 font-medium">Tokens shielded successfully!</p>
                   {hash && (
                     <a
                       href={getBlockExplorerTxUrl(contract.chainId, hash)}
@@ -947,11 +686,8 @@ export const ShieldUnshieldModal = ({
               disabled={isButtonDisabled()}
               className="btn btn-fhenix w-full font-bold tracking-wider rounded-sm h-12 font-display uppercase"
             >
-              {isPending || isPolling ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  {getButtonText()}
-                </>
+              {isPending ? (
+                <><Loader2 className="w-5 h-5 animate-spin mr-2" />{getButtonText()}</>
               ) : (
                 <>
                   {mode === "shield" ? (
