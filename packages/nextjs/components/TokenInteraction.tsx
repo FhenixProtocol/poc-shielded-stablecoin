@@ -28,7 +28,8 @@ import {
 } from "wagmi";
 import { parseUnits, isAddress, formatUnits } from "viem";
 import { abi } from "@/utils/contract";
-import { cofhejs, Encryptable, FheTypes } from "cofhejs/web";
+import { Encryptable, FheTypes } from "@cofhe/sdk";
+import { cofheClient } from "@/services/cofhe-client";
 import { useCofheStore } from "@/services/store/cofheStore";
 import { usePermit } from "@/hooks/usePermit";
 import {
@@ -168,28 +169,17 @@ export const TokenInteraction = () => {
 
     setIsRevealingBalance(true);
     try {
-      const result = await cofhejs.unseal(ctHash, FheTypes.Uint64);
-      if (result?.success && result?.data !== undefined) {
-        setRevealedShieldedBalance(BigInt(result.data.toString()));
-        setIsBalanceVisible(true);
-      } else {
-        const errorMessage =
-          result?.error?.message || String(result?.error) || "";
-        if (
-          errorMessage.includes("sealed data not found") ||
-          errorMessage.includes("400 Bad Request") ||
-          errorMessage.includes("Failed to fetch full ciphertext")
-        ) {
-          setRevealedShieldedBalance(BigInt(0));
-          setIsBalanceVisible(true);
-        }
-      }
+      const plaintext = await cofheClient
+        .decryptForView(ctHash, FheTypes.Uint64)
+        .execute();
+      setRevealedShieldedBalance(BigInt(String(plaintext)));
+      setIsBalanceVisible(true);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       if (
-        errorMessage.includes("sealed data not found") ||
-        errorMessage.includes("400 Bad Request") ||
-        errorMessage.includes("Failed to fetch full ciphertext")
+        errorMessage.includes("not found") ||
+        errorMessage.includes("400") ||
+        errorMessage.includes("ciphertext")
       ) {
         setRevealedShieldedBalance(BigInt(0));
         setIsBalanceVisible(true);
@@ -297,20 +287,17 @@ export const TokenInteraction = () => {
           const confidentialDecimals = 6;
           const parsedAmount = parseUnits(amount, confidentialDecimals);
 
-          // Encrypt the amount using cofhejs
-          const encryptedResult = await cofhejs.encrypt([
-            Encryptable.uint64(parsedAmount),
-            Encryptable.uint64(parsedAmount),
-            Encryptable.bool(true),
-          ] as const);
-
-          const encryptedAmount = encryptedResult.data?.[0];
+          // Encrypt the amount using cofhe/sdk
+          const [encryptedAmount] = await cofheClient
+            .encryptInputs([Encryptable.uint64(parsedAmount)])
+            .execute();
 
           writeContract({
             address: selectedToken.address as `0x${string}`,
             abi,
             functionName: "confidentialTransfer",
-            args: [toAddress as `0x${string}`, encryptedAmount],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            args: [toAddress as `0x${string}`, encryptedAmount as any],
           });
         } catch (encError) {
           const errorMessage =

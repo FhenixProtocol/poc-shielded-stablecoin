@@ -30,13 +30,11 @@ contract ${name.replace(/\s+/g, "")} is ERC20 {
 
   // Shielded Version
   return `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.25;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Confidential} from "fhenix-confidential-contracts/contracts/extensions/ERC20Confidential.sol";
-import {euint64, InEuint64, FHE} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
+import {ERC20Confidential} from "fhenix-confidential-contracts/contracts/ERC20Confidential/ERC20Confidential.sol";
 
-contract ShieldedStablecoin is ERC20, ERC20Confidential {
+contract ShieldedStablecoin is ERC20Confidential {
 
     constructor() ERC20Confidential("${name}", "${symbol}", ${decimals}) {}
 
