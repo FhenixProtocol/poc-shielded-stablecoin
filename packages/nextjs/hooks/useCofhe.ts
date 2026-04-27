@@ -34,7 +34,7 @@ export function useCofhe() {
     const connect = async () => {
       try {
         setIsInitializing(true);
-        await cofheClient.connect(publicClient, walletClient);
+        await cofheClient.connect(publicClient as never, walletClient as never);
         setGlobalIsInitialized(true);
         setError(null);
       } catch (err) {
